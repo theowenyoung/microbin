@@ -24,6 +24,7 @@ pub mod pasta;
 pub mod util {
     pub mod animalnumbers;
     pub mod auth;
+    pub mod contentrenderer;
     pub mod db;
     pub mod db_json;
     #[cfg(feature = "default")]
@@ -118,6 +119,7 @@ async fn main() -> std::io::Result<()> {
             .service(file::get_file)
             .service(file::post_secure_file)
             .service(static_resources::static_resources)
+            .service(static_resources::robots_txt)
             .service(guide::guide)
             .service(auth_upload::auth_file_with_status)
             .service(auth_upload::auth_upload_with_status)

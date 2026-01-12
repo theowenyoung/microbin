@@ -72,11 +72,32 @@ justify-content: center; align-items: center;">
 {% if pasta.content != "" %}
 <div class="code-container">
   <div style="clear: both;">
-    {% if pasta.extension == "auto" || pasta.encrypt_client %}
+    {% if pasta.encrypt_client %}
+    <!-- Client-encrypted: show escaped, will be decrypted by JS -->
     <pre><code id="code">{{pasta.content_escaped()}}</code></pre>
-    {% else if args.highlightsyntax %}
+    {% else if pasta.should_render_markdown() %}
+    <!-- Rendered Markdown -->
+    <div id="markdown-content" class="markdown-body">
+      {{pasta.content_rendered_markdown()|safe}}
+    </div>
+    {% else if pasta.should_render_html() %}
+    <!-- Rendered HTML in sandboxed iframe -->
+    <div id="html-content">
+      <iframe
+        sandbox="allow-same-origin"
+        srcdoc="{{pasta.content_for_html_iframe()}}"
+        style="width: 100%; min-height: 400px; border: 1px solid #ddd; border-radius: 6px;"
+        title="HTML content">
+      </iframe>
+    </div>
+    {% else if pasta.extension == "auto" %}
+    <!-- Auto syntax highlighting via highlight.js -->
+    <pre><code id="code">{{pasta.content_escaped()}}</code></pre>
+    {% else if args.highlightsyntax && pasta.extension != "none" %}
+    <!-- Server-side syntax highlighting -->
     <pre><code id="code">{{pasta.content_syntax_highlighted()}}</code></pre>
     {% else %}
+    <!-- Plain text, no highlighting -->
     <pre><code id="code">{{pasta.content_not_highlighted()}}</code></pre>
     {%- endif %}
   </div>
@@ -412,6 +433,131 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
     padding-left: 0.8rem;
     padding-right: 0.8rem;
     cursor: pointer;
+  }
+
+  /* Markdown rendered content styles */
+  .markdown-body {
+    padding: 1rem;
+    line-height: 1.6;
+  }
+
+  .markdown-body h1, .markdown-body h2, .markdown-body h3,
+  .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+  }
+
+  .markdown-body h1 { font-size: 2em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+  .markdown-body h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+  .markdown-body h3 { font-size: 1.25em; }
+
+  .markdown-body pre {
+    background-color: #f6f8fa;
+    border-radius: 6px;
+    padding: 1em;
+    overflow-x: auto;
+  }
+
+  .markdown-body code {
+    background-color: rgba(175, 184, 193, 0.2);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 85%;
+    font-family: monospace;
+  }
+
+  .markdown-body pre code {
+    background: none;
+    padding: 0;
+  }
+
+  .markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+
+  .markdown-body th, .markdown-body td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .markdown-body th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+  }
+
+  .markdown-body blockquote {
+    border-left: 4px solid #ddd;
+    margin: 1em 0;
+    padding-left: 1em;
+    color: #666;
+  }
+
+  .markdown-body ul, .markdown-body ol {
+    padding-left: 2em;
+  }
+
+  .markdown-body li {
+    margin: 0.25em 0;
+  }
+
+  .markdown-body img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .markdown-body a {
+    color: #0366d6;
+  }
+
+  .markdown-body hr {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 1.5em 0;
+  }
+
+  .markdown-body p {
+    margin: 1em 0;
+  }
+
+  /* Task list checkboxes */
+  .markdown-body input[type="checkbox"] {
+    margin-right: 0.5em;
+  }
+
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .markdown-body pre {
+      background-color: #161b22;
+    }
+    .markdown-body code {
+      background-color: rgba(110, 118, 129, 0.4);
+    }
+    .markdown-body th {
+      background-color: #161b22;
+    }
+    .markdown-body blockquote {
+      border-left-color: #3b434b;
+      color: #8b949e;
+    }
+    .markdown-body h1, .markdown-body h2 {
+      border-bottom-color: #21262d;
+    }
+    .markdown-body th, .markdown-body td {
+      border-color: #30363d;
+    }
+    .markdown-body a {
+      color: #58a6ff;
+    }
+    .markdown-body hr {
+      border-top-color: #21262d;
+    }
+    #html-content iframe {
+      border-color: #30363d;
+    }
   }
 </style>
 

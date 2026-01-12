@@ -47,6 +47,9 @@ On our website [microbin.eu](https://microbin.eu), you will find the following:
 - SQLite and JSON database support
 - Private and public, editable and uneditable, automatically and never expiring uploads
 - Automatic dark mode and custom styling support with very little CSS and only vanilla JS (see [`water.css`](https://github.com/kognise/water.css))
+- **Markdown rendering** with GitHub-style formatting (tables, code blocks, task lists)
+- **HTML rendering** in sandboxed iframe for safe display
+- **Automatic content detection** - auto-detect Markdown, HTML, or code syntax
 - And much more!
 
 ## What is an upload?
@@ -71,5 +74,20 @@ You can use MicroBin:
 - Or even to take quick notes.
 
 ...and many other things, why not get creative?
+
+## Content Rendering
+
+MicroBin supports automatic content detection and rendering:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MICROBIN_DEFAULT_SYNTAX` | `auto` | Default syntax selection. Use `auto` for automatic detection, `none` for plain text, or a language extension (e.g., `py`, `js`, `rs`) |
+| `MICROBIN_RENDER_MARKDOWN` | `true` | Enable Markdown rendering with GitHub-style formatting |
+| `MICROBIN_RENDER_HTML` | `false` | Enable HTML rendering in sandboxed iframe (disabled by default for security) |
+
+When `MICROBIN_DEFAULT_SYNTAX=auto`:
+- **Markdown** content (headers, code blocks, lists, tables) is rendered like GitHub READMEs
+- **HTML** content (with DOCTYPE or multiple block elements) is displayed in a secure sandboxed iframe
+- **Code** is syntax-highlighted using highlight.js
 
 MicroBin and MicroBin.eu are available under the [BSD 3-Clause License](LICENSE).

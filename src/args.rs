@@ -46,6 +46,15 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_HIGHLIGHTSYNTAX")]
     pub highlightsyntax: bool,
 
+    #[clap(long, env = "MICROBIN_DEFAULT_SYNTAX", default_value = "auto")]
+    pub default_syntax: String,
+
+    #[clap(long, env = "MICROBIN_RENDER_MARKDOWN")]
+    pub render_markdown: bool,
+
+    #[clap(long, env = "MICROBIN_RENDER_HTML")]
+    pub render_html: bool,
+
     #[clap(short, long, env = "MICROBIN_PORT", default_value_t = 8080)]
     pub port: u16,
 
@@ -180,6 +189,9 @@ impl Args {
             hide_logo: self.hide_logo,
             no_listing: self.no_listing,
             highlightsyntax: self.highlightsyntax,
+            default_syntax: self.default_syntax,
+            render_markdown: self.render_markdown,
+            render_html: self.render_html,
             port: self.port,
             bind: self.bind,
             private: self.private,

@@ -1,5 +1,5 @@
 {% include "header.html" %}
-<form id="pasta-form" action="{{ args.public_path_as_str() }}/upload" method="POST" enctype="multipart/form-data">
+<form id="pasta-form" action="{{ args.public_path_as_str() }}/upload" method="POST" enctype="multipart/form-data" autocomplete="off">
     <br>
     <div id="settings">
         <div>
@@ -102,43 +102,157 @@
         <div>
             <label for="syntax_highlight">Syntax <sup> <a href="{{ args.public_path_as_str() }}/guide#syntax">?</a></sup></label><br>
             <select style="width: 100%;" name="syntax_highlight" id="syntax_highlight">
-                <option value="none">None</option>
-                <optgroup label="Client-Rendered">
+                <optgroup label="Display Mode">
+                    {% if args.default_syntax == "none" %}
+                    <option selected value="none">None</option>
+                    {% else %}
+                    <option value="none">None</option>
+                    {% endif %}
+                    {% if args.default_syntax == "auto" %}
+                    <option selected value="auto">Automatic</option>
+                    {% else %}
                     <option value="auto">Automatic</option>
+                    {% endif %}
                 </optgroup>
+                {% if args.render_markdown || args.render_html %}
+                <optgroup label="Rendered">
+                    {% if args.render_markdown %}
+                    {% if args.default_syntax == "md" %}
+                    <option selected value="md">Markdown</option>
+                    {% else %}
+                    <option value="md">Markdown</option>
+                    {% endif %}
+                    {% endif %}
+                    {% if args.render_html %}
+                    {% if args.default_syntax == "html" %}
+                    <option selected value="html">HTML (iframe)</option>
+                    {% else %}
+                    <option value="html">HTML (iframe)</option>
+                    {% endif %}
+                    {% endif %}
+                </optgroup>
+                {% endif %}
                 <optgroup label="Server-Rendered">
+                    {% if args.default_syntax == "sh" %}
+                    <option selected value="sh">Bash Shell</option>
+                    {% else %}
                     <option value="sh">Bash Shell</option>
+                    {% endif %}
+                    {% if args.default_syntax == "c" %}
+                    <option selected value="c">C</option>
+                    {% else %}
                     <option value="c">C</option>
+                    {% endif %}
+                    {% if args.default_syntax == "cpp" %}
+                    <option selected value="cpp">C++</option>
+                    {% else %}
                     <option value="cpp">C++</option>
+                    {% endif %}
+                    {% if args.default_syntax == "cs" %}
+                    <option selected value="cs">C#</option>
+                    {% else %}
                     <option value="cs">C#</option>
+                    {% endif %}
+                    {% if args.default_syntax == "pas" %}
+                    <option selected value="pas">Delphi</option>
+                    {% else %}
                     <option value="pas">Delphi</option>
+                    {% endif %}
+                    {% if args.default_syntax == "erl" %}
+                    <option selected value="erl">Erlang</option>
+                    {% else %}
                     <option value="erl">Erlang</option>
+                    {% endif %}
+                    {% if args.default_syntax == "go" %}
+                    <option selected value="go">Go</option>
+                    {% else %}
                     <option value="go">Go</option>
+                    {% endif %}
+                    {% if args.default_syntax == "hs" %}
+                    <option selected value="hs">Haskell</option>
+                    {% else %}
                     <option value="hs">Haskell</option>
-                    <option value="html">HTML</option>
+                    {% endif %}
+                    {% if args.default_syntax == "lua" %}
+                    <option selected value="lua">Lua</option>
+                    {% else %}
                     <option value="lua">Lua</option>
+                    {% endif %}
+                    {% if args.default_syntax == "lisp" %}
+                    <option selected value="lisp">Lisp</option>
+                    {% else %}
                     <option value="lisp">Lisp</option>
+                    {% endif %}
+                    {% if args.default_syntax == "java" %}
+                    <option selected value="java">Java</option>
+                    {% else %}
                     <option value="java">Java</option>
+                    {% endif %}
+                    {% if args.default_syntax == "js" %}
+                    <option selected value="js">JavaScript</option>
+                    {% else %}
                     <option value="js">JavaScript</option>
+                    {% endif %}
+                    {% if args.default_syntax == "kt" %}
+                    <option selected value="kt">Kotlin</option>
+                    {% else %}
                     <option value="kt">Kotlin</option>
+                    {% endif %}
+                    {% if args.default_syntax == "py" %}
+                    <option selected value="py">Python</option>
+                    {% else %}
                     <option value="py">Python</option>
+                    {% endif %}
+                    {% if args.default_syntax == "php" %}
+                    <option selected value="php">PHP</option>
+                    {% else %}
                     <option value="php">PHP</option>
+                    {% endif %}
+                    {% if args.default_syntax == "r" %}
+                    <option selected value="r">R</option>
+                    {% else %}
                     <option value="r">R</option>
+                    {% endif %}
+                    {% if args.default_syntax == "rs" %}
+                    <option selected value="rs">Rust</option>
+                    {% else %}
                     <option value="rs">Rust</option>
+                    {% endif %}
+                    {% if args.default_syntax == "rb" %}
+                    <option selected value="rb">Ruby</option>
+                    {% else %}
                     <option value="rb">Ruby</option>
+                    {% endif %}
+                    {% if args.default_syntax == "sc" %}
+                    <option selected value="sc">Scala</option>
+                    {% else %}
                     <option value="sc">Scala</option>
+                    {% endif %}
+                    {% if args.default_syntax == "swift" %}
+                    <option selected value="swift">Swift</option>
+                    {% else %}
                     <option value="swift">Swift</option>
-                    <!-- no toml support ;-( -->
-                    <option value="json">TOML</option>
+                    {% endif %}
+                    {% if args.default_syntax == "yaml" %}
+                    <option selected value="yaml">YAML</option>
+                    {% else %}
                     <option value="yaml">YAML</option>
+                    {% endif %}
+                    {% if args.default_syntax == "json" %}
+                    <option selected value="json">JSON</option>
+                    {% else %}
                     <option value="json">JSON</option>
+                    {% endif %}
+                    {% if args.default_syntax == "xml" %}
+                    <option selected value="xml">XML</option>
+                    {% else %}
                     <option value="xml">XML</option>
-                </optgroup>
+                    {% endif %}
                 </optgroup>
             </select>
         </div>
         {%- else %}
-        <input type="hidden" name="syntax_highlight" value="none">
+        <input type="hidden" name="syntax_highlight" value="{{ args.default_syntax }}">
         {%- endif %}
 
         {% if args.encryption_client_side || args.encryption_server_side || args.enable_readonly || args.private %}
@@ -181,7 +295,8 @@
 
     <label>Content</label>
     <textarea style="width: 100%; min-height: 100px; margin-bottom: 2em; font-family: monospace;" id="content-input"
-        autofocus placeholder="Type something here."></textarea>
+        autofocus autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"
+        placeholder="Type something here."></textarea>
     <div>
         {% if !args.no_file_upload %}
         <div id="file-select">
@@ -378,9 +493,35 @@
         });
     }
 
+    // Handle .md and .html files specially - read content into textarea
+    function handleFileAsContent(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'md' || ext === 'html') {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                contentInput.value = e.target.result;
+                // Set syntax highlighting dropdown if it exists
+                const syntaxDropdown = document.getElementById('syntax_highlight');
+                if (syntaxDropdown) {
+                    syntaxDropdown.value = ext;
+                }
+                // Clear the file attachment since we're using it as content
+                hiddenFileButton.value = '';
+                attachFileButton.textContent = "Select or drop file attachment";
+            };
+            reader.readAsText(file);
+            return true; // File was handled as content
+        }
+        return false; // File should be handled as attachment
+    }
+
     hiddenFileButton.addEventListener('change', function () {
-        attachFileButton.textContent = "Attached: " + this.files[0].name;
-        fileOversized();
+        if (this.files.length > 0) {
+            if (!handleFileAsContent(this.files[0])) {
+                attachFileButton.textContent = "Attached: " + this.files[0].name;
+                fileOversized();
+            }
+        }
     });
 
     dropContainer.ondragover = dropContainer.ondragenter = function (evt) {
@@ -393,11 +534,14 @@
     };
 
     dropContainer.ondrop = function (evt) {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(evt.dataTransfer.files[0]);
-        hiddenFileButton.files = dataTransfer.files;
-        attachFileButton.textContent = "Attached: " + hiddenFileButton.files[0].name;
         evt.preventDefault();
+        const file = evt.dataTransfer.files[0];
+        if (!handleFileAsContent(file)) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            hiddenFileButton.files = dataTransfer.files;
+            attachFileButton.textContent = "Attached: " + file.name;
+        }
     };
     // {%- endif %}
 
