@@ -1,0 +1,82 @@
+# Production Dockerfile for MicroBin
+# Multi-stage build with security and caching optimizations
+
+# ============== Build Stage ==============
+FROM rust:1.83-slim-bookworm AS build
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        pkg-config \
+        libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Cache dependencies by copying manifests first
+COPY Cargo.toml Cargo.lock ./
+
+# Create dummy src to build dependencies
+RUN mkdir src && \
+    echo "fn main() {}" > src/main.rs && \
+    cargo build --release && \
+    rm -rf src target/release/deps/microbin*
+
+# Copy actual source code
+COPY src ./src
+COPY templates ./templates
+COPY static ./static
+
+# Build the actual application
+RUN cargo build --release && \
+    strip /app/target/release/microbin
+
+# ============== Runtime Stage ==============
+FROM debian:bookworm-slim
+
+LABEL org.opencontainers.image.title="MicroBin" \
+      org.opencontainers.image.description="A tiny, self-contained pastebin and URL shortener" \
+      org.opencontainers.image.source="https://github.com/szabodanika/microbin"
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user
+RUN groupadd -r microbin && \
+    useradd -r -g microbin -d /app -s /sbin/nologin microbin
+
+WORKDIR /app
+
+# Create data directory with proper permissions
+RUN mkdir -p /app/microbin_data && \
+    chown -R microbin:microbin /app
+
+# Copy binary from build stage
+COPY --from=build --chown=microbin:microbin \
+    /app/target/release/microbin /usr/bin/microbin
+
+# Switch to non-root user
+USER microbin
+
+# Default environment variables for production
+ENV MICROBIN_PORT=3000 \
+    MICROBIN_BIND=0.0.0.0 \
+    MICROBIN_DATA_DIR=/app/microbin_data \
+    MICROBIN_GC_DAYS=90 \
+    MICROBIN_ENABLE_BURN_AFTER=true \
+    MICROBIN_ENABLE_READONLY=true
+
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/usr/bin/microbin", "--help"] || exit 1
+
+# Use exec form for proper signal handling
+ENTRYPOINT ["/usr/bin/microbin"]
