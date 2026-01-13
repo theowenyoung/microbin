@@ -64,6 +64,9 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_PRIVATE")]
     pub private: bool,
 
+    #[clap(long, env = "MICROBIN_DEFAULT_PRIVACY", default_value = "public")]
+    pub default_privacy: String,
+
     #[clap(long, env = "MICROBIN_PURE_HTML")]
     pub pure_html: bool,
 
@@ -195,6 +198,7 @@ impl Args {
             port: self.port,
             bind: self.bind,
             private: self.private,
+            default_privacy: self.default_privacy,
             pure_html: self.pure_html,
             json_db: self.json_db,
             public_path: self.public_path,
