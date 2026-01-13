@@ -1,67 +1,53 @@
 # Production Dockerfile for MicroBin
-# Multi-stage build with security and caching optimizations
+# Based on original Dockerfile with production optimizations
 
-# ============== Build Stage ==============
-FROM rust:1.83-slim-bookworm AS build
+FROM rust:latest AS build
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        pkg-config \
-        libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN \
+  DEBIAN_FRONTEND=noninteractive \
+  apt-get update && \
+  apt-get -y install ca-certificates tzdata
 
-# Cache dependencies by copying manifests first
-COPY Cargo.toml Cargo.lock ./
+COPY . .
 
-# Create dummy src to build dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs && \
-    cargo build --release && \
-    rm -rf src target/release/deps/microbin*
+RUN \
+  CARGO_NET_GIT_FETCH_WITH_CLI=true \
+  cargo build --release && \
+  strip /app/target/release/microbin
 
-# Copy actual source code
-COPY src ./src
-COPY templates ./templates
-COPY static ./static
-
-# Build the actual application
-RUN cargo build --release && \
-    strip /app/target/release/microbin
-
-# ============== Runtime Stage ==============
-FROM debian:bookworm-slim
+# https://hub.docker.com/r/bitnami/minideb
+FROM bitnami/minideb:latest
 
 LABEL org.opencontainers.image.title="MicroBin" \
       org.opencontainers.image.description="A tiny, self-contained pastebin and URL shortener" \
       org.opencontainers.image.source="https://github.com/szabodanika/microbin"
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        tzdata \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+WORKDIR /app
+
+RUN mkdir -p /usr/share/zoneinfo
+
+# Copy time zone info
+COPY --from=build \
+  /usr/share/zoneinfo \
+  /usr/share/
+
+COPY --from=build \
+  /etc/ssl/certs/ca-certificates.crt \
+  /etc/ssl/certs/ca-certificates.crt
+
+# Copy built executable
+COPY --from=build \
+  /app/target/release/microbin \
+  /usr/bin/microbin
 
 # Create non-root user
 RUN groupadd -r microbin && \
-    useradd -r -g microbin -d /app -s /sbin/nologin microbin
-
-WORKDIR /app
-
-# Create data directory with proper permissions
-RUN mkdir -p /app/microbin_data && \
+    useradd -r -g microbin -d /app -s /sbin/nologin microbin && \
+    mkdir -p /app/microbin_data && \
     chown -R microbin:microbin /app
 
-# Copy binary from build stage
-COPY --from=build --chown=microbin:microbin \
-    /app/target/release/microbin /usr/bin/microbin
-
-# Switch to non-root user
 USER microbin
 
 # Default environment variables for production
@@ -76,9 +62,7 @@ ENV MICROBIN_PORT=3000 \
 
 EXPOSE 3000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD ["/usr/bin/microbin", "--help"] || exit 1
 
-# Use exec form for proper signal handling
-ENTRYPOINT ["/usr/bin/microbin"]
+ENTRYPOINT ["microbin"]
