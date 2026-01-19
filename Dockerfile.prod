@@ -12,10 +12,12 @@ RUN \
 
 COPY . .
 
-RUN \
-  CARGO_NET_GIT_FETCH_WITH_CLI=true \
-  cargo build --release && \
-  strip /app/target/release/microbin
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+      --mount=type=cache,target=/app/target \
+      CARGO_NET_GIT_FETCH_WITH_CLI=true \
+      cargo build --release && \
+      cp /app/target/release/microbin /app/microbin-binary && \
+      strip /app/microbin-binary
 
 # https://hub.docker.com/r/bitnami/minideb
 FROM bitnami/minideb:latest
@@ -38,9 +40,7 @@ COPY --from=build \
   /etc/ssl/certs/ca-certificates.crt
 
 # Copy built executable
-COPY --from=build \
-  /app/target/release/microbin \
-  /usr/bin/microbin
+COPY --from=build /app/microbin-binary /usr/bin/microbin
 
 # Create non-root user
 RUN groupadd -r microbin && \
