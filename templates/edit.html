@@ -5,8 +5,11 @@
     </h4>
     <label>Content</label>
     <br>
-    <textarea style="width: 100%; min-height: 100px; font-family: monospace;" name="content" id="content" {% if status
-        !="incorrect" %} autofocus {% endif %}>{{ pasta.content_textarea_safe() }}</textarea>
+    <textarea style="width: 100%; min-height: 100px; font-family: monospace;" name="content" id="content"
+        class="code-editor no-password-save" role="textbox" aria-multiline="true"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        data-gramm="false" data-form-type="other" data-1p-ignore data-lpignore="true" data-bwignore
+        {% if status !="incorrect" %} autofocus {% endif %}>{{ pasta.content_textarea_safe() }}</textarea>
     <br>
     <div>
         {% if pasta.readonly || pasta.encrypt_server %}

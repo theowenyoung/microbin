@@ -295,7 +295,9 @@
 
     <label>Content</label>
     <textarea style="width: 100%; min-height: 100px; margin-bottom: 2em; font-family: monospace;" id="content-input"
-        autofocus autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"
+        class="code-editor no-password-save" role="textbox" aria-multiline="true"
+        autofocus autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        data-gramm="false" data-form-type="other" data-1p-ignore data-lpignore="true" data-bwignore
         placeholder="Type something here."></textarea>
     <div>
         {% if !args.no_file_upload %}
