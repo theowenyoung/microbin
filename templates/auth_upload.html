@@ -39,6 +39,8 @@
 
     if (key) {
       passwordHiddenField.value = key;
+      // Store password for auto-decryption on content page
+      sessionStorage.setItem("microbin_decrypt_key", passwordField.value);
     }
 
   };

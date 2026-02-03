@@ -43,25 +43,25 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_NO_LISTING")]
     pub no_listing: bool,
 
-    #[clap(long, env = "MICROBIN_HIGHLIGHTSYNTAX")]
+    #[clap(long, env = "MICROBIN_HIGHLIGHTSYNTAX", default_value_t = true)]
     pub highlightsyntax: bool,
 
     #[clap(long, env = "MICROBIN_DEFAULT_SYNTAX", default_value = "auto")]
     pub default_syntax: String,
 
-    #[clap(long, env = "MICROBIN_RENDER_MARKDOWN")]
+    #[clap(long, env = "MICROBIN_RENDER_MARKDOWN", default_value_t = true)]
     pub render_markdown: bool,
 
-    #[clap(long, env = "MICROBIN_RENDER_HTML")]
+    #[clap(long, env = "MICROBIN_RENDER_HTML", default_value_t = true)]
     pub render_html: bool,
 
-    #[clap(short, long, env = "MICROBIN_PORT", default_value_t = 8080)]
+    #[clap(short, long, env = "MICROBIN_PORT", default_value_t = 9018)]
     pub port: u16,
 
     #[clap(short, long, env="MICROBIN_BIND", default_value_t = IpAddr::from([0, 0, 0, 0]))]
     pub bind: IpAddr,
 
-    #[clap(long, env = "MICROBIN_PRIVATE")]
+    #[clap(long, env = "MICROBIN_PRIVATE", default_value_t = true)]
     pub private: bool,
 
     #[clap(long, env = "MICROBIN_DEFAULT_PRIVACY", default_value = "public")]
@@ -85,7 +85,7 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_READONLY")]
     pub readonly: bool,
 
-    #[clap(long, env = "MICROBIN_SHOW_READ_STATS")]
+    #[clap(long, env = "MICROBIN_SHOW_READ_STATS", default_value_t = true)]
     pub show_read_stats: bool,
 
     #[clap(long, env = "MICROBIN_TITLE")]
@@ -94,7 +94,7 @@ pub struct Args {
     #[clap(short, long, env = "MICROBIN_THREADS", default_value_t = 1)]
     pub threads: u8,
 
-    #[clap(short, long, env = "MICROBIN_GC_DAYS", default_value_t = 90)]
+    #[clap(short, long, env = "MICROBIN_GC_DAYS", default_value_t = 30)]
     pub gc_days: u16,
 
     #[clap(long, env = "MICROBIN_ENABLE_BURN_AFTER")]
@@ -106,16 +106,16 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_WIDE")]
     pub wide: bool,
 
-    #[clap(long, env = "MICROBIN_QR")]
+    #[clap(long, env = "MICROBIN_QR", default_value_t = true)]
     pub qr: bool,
 
-    #[clap(long, env = "MICROBIN_ETERNAL_PASTA")]
+    #[clap(long, env = "MICROBIN_ETERNAL_PASTA", default_value_t = true)]
     pub eternal_pasta: bool,
 
     #[clap(long, env = "MICROBIN_ENABLE_READONLY")]
     pub enable_readonly: bool,
 
-    #[clap(long, env = "MICROBIN_DEFAULT_EXPIRY", default_value = "24hour")]
+    #[clap(long, env = "MICROBIN_DEFAULT_EXPIRY", default_value = "1week")]
     pub default_expiry: String,
 
     #[clap(long, env = "MICROBIN_DATA_DIR", default_value = "microbin_data")]
@@ -133,22 +133,22 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_LIST_SERVER")]
     pub list_server: bool,
 
-    #[clap(long, env = "MICROBIN_DISABLE_TELEMETRY")]
+    #[clap(long, env = "MICROBIN_DISABLE_TELEMETRY", default_value_t = true)]
     pub disable_telemetry: bool,
 
     #[clap(long, env = "MICROBIN_DISABLE_UPDATE_CHECKING")]
     pub disable_update_checking: bool,
 
-    #[clap(long, env = "MICROBIN_ENCRYPTION_CLIENT_SIDE")]
+    #[clap(long, env = "MICROBIN_ENCRYPTION_CLIENT_SIDE", default_value_t = true)]
     pub encryption_client_side: bool,
 
-    #[clap(long, env = "MICROBIN_ENCRYPTION_SERVER_SIDE")]
+    #[clap(long, env = "MICROBIN_ENCRYPTION_SERVER_SIDE", default_value_t = true)]
     pub encryption_server_side: bool,
 
     #[clap(
         long,
         env = "MICROBIN_MAX_FILE_SIZE_ENCRYPTED_MB",
-        default_value_t = 256
+        default_value_t = 1024
     )]
     pub max_file_size_encrypted_mb: usize,
 

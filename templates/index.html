@@ -255,40 +255,21 @@
         <input type="hidden" name="syntax_highlight" value="{{ args.default_syntax }}">
         {%- endif %}
 
-        {% if args.encryption_client_side || args.encryption_server_side || args.enable_readonly || args.private %}
         <div>
             <label for="privacy">Privacy <sup> <a href="{{ args.public_path_as_str() }}/guide#privacy">?</a></sup></label><br>
             <select style="width: 100%;" name="privacy" id="privacy">
-                <optgroup label="Unencrypted (no password)">
-                    <option value="public" {% if args.default_privacy == "public" %}selected{% endif %}>Public</option>
-                    {% if args.private %}
-                    <option value="unlisted" {% if args.default_privacy == "unlisted" %}selected{% endif %}>Unlisted</option>
-                    {%- endif %}
-                </optgroup>
-                {% if args.enable_readonly %}
-                <optgroup label="Unencrypted (protected)">
-                    <option value="readonly" {% if args.default_privacy == "readonly" %}selected{% endif %}>Read-only</option>
-                </optgroup>
+                <option value="public" {% if args.default_privacy == "public" %}selected{% endif %}>Public</option>
+                {% if args.private %}
+                <option value="unlisted" {% if args.default_privacy == "unlisted" %}selected{% endif %}>Unlisted</option>
                 {%- endif %}
-                {% if args.encryption_client_side || args.encryption_server_side %}
-                <optgroup label="Encrypted">
-                    {% if args.encryption_server_side %}
-                    <option value="private" {% if args.default_privacy == "private" %}selected{% endif %}>Private</option>
-                    {%- endif %}
-                    {% if args.encryption_client_side%}
-                    <option value="secret" {% if args.default_privacy == "secret" %}selected{% endif %}>Secret</option>
-                    {%- endif %}
-                </optgroup>
+                {% if args.encryption_client_side %}
+                <option value="secret" {% if args.default_privacy == "secret" %}selected{% endif %}>Secret</option>
                 {%- endif %}
             </select>
         </div>
-        {%- endif %}
 
-        {% if args.encryption_client_side || args.encryption_server_side || args.enable_readonly %}
-        <div>
-            <label for="password_field">Password <sup><a href="{{ args.public_path_as_str() }}/guide#password">?</a></sup></label><br>
-            <input style="width: 130px; height: 28px;" type="password" id="password_field" autocomplete="off" />
-        </div>
+        {% if args.encryption_client_side %}
+        <div id="password_placeholder" style="display: none;"></div>
         {%- endif %}
 
     </div>
@@ -332,13 +313,48 @@
     <input type="hidden" name="random_key" id="random_key">
     <input type="hidden" name="plain_key" id="plain_key">
 </form>
+
+{% if args.encryption_client_side %}
+<form id="password-form" onsubmit="return false;">
+    <label for="password_field">Password <sup><a href="{{ args.public_path_as_str() }}/guide#password">?</a></sup></label><br>
+    <input style="width: 130px; height: 28px;" type="password" id="password_field" autocomplete="off" />
+</form>
+{%- endif %}
+
 <br>
 <br>
 <script>
+    // Move password form into placeholder to isolate it from main form
+    // This prevents iCloud extension from hijacking the main form's textarea
+    (function() {
+        const placeholder = document.getElementById("password_placeholder");
+        const passwordForm = document.getElementById("password-form");
+        if (placeholder && passwordForm) {
+            placeholder.appendChild(passwordForm);
+        }
+    })();
+
     const form = document.getElementById("pasta-form");
     const submitButton = document.getElementById("submit-button");
     const passwordField = document.getElementById("password_field");
     const privacyDropdown = document.getElementById("privacy");
+    const passwordPlaceholder = document.getElementById("password_placeholder");
+
+    // Show/hide password field based on privacy selection
+    function updatePasswordVisibility() {
+        if (passwordPlaceholder) {
+            if (privacyDropdown.value === "secret") {
+                passwordPlaceholder.style.display = "";
+            } else {
+                passwordPlaceholder.style.display = "none";
+                if (passwordField) passwordField.value = "";
+            }
+        }
+    }
+    if (privacyDropdown) {
+        privacyDropdown.addEventListener("change", updatePasswordVisibility);
+        updatePasswordVisibility();
+    }
     const contentInput = document.getElementById("content-input");
     const content = document.getElementById("content");
     const attachFileButton = document.getElementById('attach-file-button');
@@ -355,41 +371,41 @@
         event.preventDefault(); // prevent default form submission
 
         // {% if args.encryption_client_side || args.encryption_server_side || args.enable_readonly %}
-        if (passwordField.value.trim() != "") {
+        if (passwordField && passwordField.value.trim() != "") {
             // {% if !args.no_file_upload %}
             if (fileOversized()) return false;
             // {%- endif %}
 
             if (privacyDropdown.value == "secret") {
                 let randomKey = Array.from(Array(16), () => Math.floor(Math.random() * 36).toString(36)).join('');
-                hiddenRandomKeyField.value = randomKey;
-                hiddenEncryptedRandomKeyField.value = encryptWithPassword(passwordField.value, randomKey);
+                if (hiddenRandomKeyField) hiddenRandomKeyField.value = randomKey;
+                if (hiddenEncryptedRandomKeyField) hiddenEncryptedRandomKeyField.value = encryptWithPassword(passwordField.value, randomKey);
                 if (contentInput.value.trim() != "") {
                     content.value = encryptWithPassword(passwordField.value.trim(), contentInput.value);
                 } else {
                     content.value = contentInput.value;
                 }
-                hiddenPlainKeyField.name = "";
+                if (hiddenPlainKeyField) hiddenPlainKeyField.name = "";
                 // {% if !args.no_file_upload %}
                 await encryptFile();
                 // {%- endif %}
             } else {
-                hiddenPlainKeyField.value = passwordField.value;
-                hiddenEncryptedClientSide.name = "";
-                hiddenEncryptedRandomKeyField.name = "";
-                hiddenRandomKeyField.name = "";
+                if (hiddenPlainKeyField) hiddenPlainKeyField.value = passwordField.value;
+                if (hiddenEncryptedClientSide) hiddenEncryptedClientSide.name = "";
+                if (hiddenEncryptedRandomKeyField) hiddenEncryptedRandomKeyField.name = "";
+                if (hiddenRandomKeyField) hiddenRandomKeyField.name = "";
                 content.value = contentInput.value;
             }
         } else {
             if (privacyDropdown.value != "public" && privacyDropdown.value != "unlisted") {
-                passwordField.focus();
+                if (passwordField) passwordField.focus();
                 return false;
             }
-            hiddenEncryptedClientSide.name = "";
+            if (hiddenEncryptedClientSide) hiddenEncryptedClientSide.name = "";
             content.value = contentInput.value;
         }
         // {%- else %}
-        hiddenEncryptedClientSide.name = "";
+        if (hiddenEncryptedClientSide) hiddenEncryptedClientSide.name = "";
         content.value = contentInput.value;
         // {%- endif %}
 

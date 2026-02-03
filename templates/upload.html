@@ -330,19 +330,32 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
   });
   // {% endif  %} 
 
-  decryptButton.addEventListener("click", () => {
-    password = passwordField.value;
-
-    content = contentDecrypted = escapeHtml(decryptWithPassword(password, content));
+  function doDecrypt(pwd) {
+    content = contentDecrypted = escapeHtml(decryptWithPassword(pwd, content));
     if (contentDecrypted) {
       contentElement.innerHTML = contentDecrypted;
       // {% if pasta.extension == "auto" %}
       hljs.highlightAll();
-      // {% endif  %} 
+      // {% endif  %}
       contentElement.innerHTML = wrapStringInCodeLines(contentElement.innerHTML);
-      // decryptDiv.style.display = 'none';
+      decryptDiv.style.display = 'none';
     }
+  }
+
+  decryptButton.addEventListener("click", () => {
+    password = passwordField.value;
+    doDecrypt(password);
   });
+
+  // Auto-decrypt if password was stored from auth page
+  (function() {
+    const storedKey = sessionStorage.getItem("microbin_decrypt_key");
+    if (storedKey) {
+      sessionStorage.removeItem("microbin_decrypt_key");
+      passwordField.value = storedKey;
+      doDecrypt(storedKey);
+    }
+  })();
 
   function decryptWithPassword(password, encryptedHex) {
     const passwordBytes = aesjs.utils.utf8.toBytes(password.padStart(32, "#"));
