@@ -33,28 +33,17 @@ padding-right:0.5rem; line-height: 1.5; font-size: 1.1em; padding-top: 2rem;">
         <br>
         {% if !args.hide_header %}
 
-        <div id="nav" style="margin-bottom: 1rem;">
-            <b style="margin-right: 0.5rem">
-                {% if !args.hide_logo %}
-                <!-- <i><span style="font-size:2.2rem;
-                margin-right:1rem">μ</span></i> -->
-                <a href="{{ args.public_path_as_str() }}"><img width=100 style="margin-bottom: -6px; margin-right:
-                0.5rem;" src="{{ args.public_path_as_str() }}/static/logo.png"></a>
-                {%- endif %} {% if args.title.as_ref().is_none() %} {%- else %} {{
-                args.title.as_ref().unwrap() }} {%- endif %}
-            </b>
-
-            <a href="{{ args.public_path_as_str() }}/" style="margin-right: 0.5rem;
-            margin-left: 0.5rem">New</a>
-
-            {% if !args.no_listing %}
-            <a href="{{ args.public_path_as_str() }}/list" style="margin-right: 0.5rem; margin-left: 0.5rem">List</a>
+        <div id="nav" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; font-size: 0.9em; padding: 0 10px;">
+            {% if !args.hide_logo %}
+            <a href="{{ args.public_path_as_str() }}"><img width=80 style="margin-bottom: -4px;" src="{{ args.public_path_as_str() }}/static/logo.png"></a>
             {%- endif %}
-
-            <a href="{{ args.public_path_as_str() }}/guide" style="margin-right: 0.5rem;
-            margin-left: 0.5rem">Guide</a>
-
-
+            {% if args.title.as_ref().is_some() %}
+            <span style="font-weight: 500;">{{ args.title.as_ref().unwrap() }}</span>
+            {%- endif %}
+            <a href="{{ args.public_path_as_str() }}/">New</a>
+            {% if !args.no_listing %}
+            <a href="{{ args.public_path_as_str() }}/list">List</a>
+            {%- endif %}
         </div>
 
         <!-- <hr> -->

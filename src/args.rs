@@ -37,7 +37,7 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_HIDE_HEADER")]
     pub hide_header: bool,
 
-    #[clap(long, env = "MICROBIN_HIDE_LOGO")]
+    #[clap(long, env = "MICROBIN_HIDE_LOGO", default_value_t = true)]
     pub hide_logo: bool,
 
     #[clap(long, env = "MICROBIN_NO_LISTING")]

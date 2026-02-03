@@ -1,40 +1,36 @@
-{% include "header.html" %}
-<div style="float: left">
-  {% if pasta.content != "" %}
-  <button id="copy-text-button" class="small-button" style="margin-right:
-  0.5rem">
-    Copy Text
-  </button>
-
-  {% if args.public_path_as_str() != "" && pasta.pasta_type == "url" %}
-  <button id="copy-redirect-button" class="small-button" style="margin-right:
-  0.5rem">
-    Copy Redirect
-  </button>
-  {%- endif %}
-  <a style="margin-right: 1rem" href="{{ args.public_path_as_str()  }}/raw/{{pasta.id_as_animals()}}">Raw Text
-    Content</a>
-  {%- endif %} {% if args.qr && args.public_path_as_str() != "" %}
-  <a style="margin-right: 1rem" href="{{ args.public_path_as_str()  }}/qr/{{pasta.id_as_animals()}}">QR</a>
-  {%- endif %} {% if pasta.editable && !pasta.encrypt_client %}
-  <a style="margin-right: 1rem" href="{{ args.public_path_as_str()  }}/edit/{{pasta.id_as_animals()}}">Edit</a>
-  {%- endif %}
-  {% if pasta.editable %}
-  <a style="margin-right: 1rem" href="{{ args.public_path_as_str()  }}/remove/{{pasta.id_as_animals()}}">Remove</a>
-  {%- endif %}
+{% include "header_minimal.html" %}
+<div class="pasta-id">
+  <a href="{{ args.public_path_as_str() }}/upload/{{pasta.id_as_animals()}}">{{pasta.id_as_animals()}}</a>
 </div>
-<div style="float: right">
-  <a style="margin-right: 0.5rem"
-    href="{{ args.public_path_as_str()  }}/upload/{{pasta.id_as_animals()}}"><i>{{pasta.id_as_animals()}}</i></a>
-  {% if args.public_path_as_str() != "" %}
-  <button id="copy-url-button" class="small-button" style="margin-right: 0">
-    Copy URL
-  </button>
-  {%- endif %}
+<div class="pasta-toolbar">
+  <div class="toolbar-nav">
+    <a href="{{ args.public_path_as_str() }}/">New</a>
+    {% if !args.no_listing %}
+    <a href="{{ args.public_path_as_str() }}/list">List</a>
+    {%- endif %}
+  </div>
+  <div class="toolbar-actions">
+    {% if args.public_path_as_str() != "" %}
+    <a href="javascript:void(0)" id="copy-url-button">Link</a>
+    {%- endif %}
+    {% if pasta.content != "" %}
+    <a href="javascript:void(0)" id="copy-text-button">Copy</a>
+    <a href="{{ args.public_path_as_str() }}/raw/{{pasta.id_as_animals()}}">Raw</a>
+    {%- endif %}
+    {% if args.public_path_as_str() != "" && pasta.pasta_type == "url" %}
+    <a href="javascript:void(0)" id="copy-redirect-button">Redirect</a>
+    {%- endif %}
+    {% if args.qr && args.public_path_as_str() != "" %}
+    <a href="{{ args.public_path_as_str() }}/qr/{{pasta.id_as_animals()}}">QR</a>
+    {%- endif %}
+    {% if pasta.editable && !pasta.encrypt_client %}
+    <a href="{{ args.public_path_as_str() }}/edit/{{pasta.id_as_animals()}}">Edit</a>
+    {%- endif %}
+    {% if pasta.editable %}
+    <a href="{{ args.public_path_as_str() }}/remove/{{pasta.id_as_animals()}}" class="action-danger">Remove</a>
+    {%- endif %}
+  </div>
 </div>
-
-<br>
-<br>
 {% if pasta.encrypt_client %}
 <span style="margin-left: auto; margin-right: auto; display: flex;
 justify-content: center; align-items: center;">
@@ -256,19 +252,19 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
 
   if (copyURLBtn) {
     copyURLBtn.addEventListener("click", () => {
-      copyToClipboard(url, copyURLBtn, "Copy URL");
+      copyToClipboard(url, copyURLBtn, "Link");
     })
   }
   if (copyRedirectBtn) {
     copyRedirectBtn.addEventListener("click", () => {
-      copyToClipboard(redirect_url, copyRedirectBtn, "Copy Redirect");
+      copyToClipboard(redirect_url, copyRedirectBtn, "Redirect");
     })
   }
 
   if (copyTextBtn) {
     copyTextBtn.addEventListener("click", () => {
       const decodeContent = decodeEntity(content)
-      copyToClipboard(decodeContent, copyTextBtn, "Copy Text");
+      copyToClipboard(decodeContent, copyTextBtn, "Copy");
     })
   }
   
@@ -382,6 +378,55 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
 </script>
 
 <style>
+  .pasta-id {
+    padding: 0 10px;
+    margin-bottom: 0.5rem;
+  }
+
+  .pasta-id a {
+    font-size: 1.1em;
+    font-weight: 500;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.8;
+  }
+
+  .pasta-id a:hover {
+    opacity: 1;
+  }
+
+  .pasta-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 10px;
+    margin-bottom: 1rem;
+    font-size: 0.9em;
+  }
+
+  .toolbar-nav, .toolbar-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .pasta-toolbar a {
+    text-decoration: none;
+  }
+
+  .pasta-toolbar a:hover {
+    text-decoration: underline;
+  }
+
+  .toolbar-actions .action-danger {
+    opacity: 0.6;
+  }
+
+  .toolbar-actions .action-danger:hover {
+    opacity: 1;
+  }
+
   code-line {
     counter-increment: line;
     text-align: right;
