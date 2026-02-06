@@ -146,15 +146,22 @@ pub async fn login_submit(form: web::Form<UploaderLoginForm>) -> HttpResponse {
     if form.password.trim() == expected_password {
         // Password correct, set cookie and redirect to home
         let token = generate_uploader_token(expected_password);
+
+        // Determine if we should use secure cookies based on public_path
+        let use_secure = ARGS.public_path_as_str().starts_with("https://");
+        log::info!(
+            "Uploader login successful, setting cookie (secure={}, public_path={})",
+            use_secure,
+            ARGS.public_path_as_str()
+        );
+
         let cookie = Cookie::build("uploader_token", token)
             .path("/")
             .max_age(Duration::days(365 * 3))
-            .secure(true)
-            .same_site(SameSite::Strict)
+            .secure(use_secure)
+            .same_site(if use_secure { SameSite::Strict } else { SameSite::Lax })
             .http_only(true)
             .finish();
-
-        log::info!("Uploader login successful, setting cookie");
         HttpResponse::Found()
             .cookie(cookie)
             .append_header(("Location", format!("{}/", ARGS.public_path_as_str())))
