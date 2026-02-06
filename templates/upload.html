@@ -11,10 +11,10 @@
   </div>
   <div class="toolbar-actions">
     {% if args.public_path_as_str() != "" %}
-    <a href="javascript:void(0)" id="copy-url-button">Link</a>
+    <a href="javascript:void(0)" id="copy-url-button">Copy Link</a>
     {%- endif %}
     {% if pasta.content != "" %}
-    <a href="javascript:void(0)" id="copy-text-button">Copy</a>
+    <a href="javascript:void(0)" id="copy-text-button">Copy Text</a>
     <a href="{{ args.public_path_as_str() }}/raw/{{pasta.id_as_animals()}}">Raw</a>
     {%- endif %}
     {% if args.public_path_as_str() != "" && pasta.pasta_type == "url" %}
@@ -261,7 +261,7 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
 
   if (copyURLBtn) {
     copyURLBtn.addEventListener("click", () => {
-      copyToClipboard(url, copyURLBtn, "Link");
+      copyToClipboard(url, copyURLBtn, "Copy Link");
     })
   }
   if (copyRedirectBtn) {
@@ -273,7 +273,7 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
   if (copyTextBtn) {
     copyTextBtn.addEventListener("click", () => {
       const decodeContent = decodeEntity(content)
-      copyToClipboard(decodeContent, copyTextBtn, "Copy");
+      copyToClipboard(decodeContent, copyTextBtn, "Copy Text");
     })
   }
   
