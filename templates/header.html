@@ -24,11 +24,13 @@
 {% if args.wide %}
 
 <body style="max-width: 1080px; margin: auto; padding-left:0.5rem;
-padding-right:0.5rem; line-height: 1.5; font-size: 1.1em; padding-top: 2rem;">
+padding-right:0.5rem; line-height: 1.5; font-size: 1.1em; padding-top: 2rem; min-height: 100vh; display: flex; flex-direction: column;">
+    <div style="flex: 1;">
     {%- else %}
 
-    <body style=" max-width: 800px; margin: auto; padding-left:0.5rem;
-    padding-right:0.5rem; padding-top: 2rem; line-height: 1.5; font-size: 1.1em; ">
+    <body style="max-width: 800px; margin: auto; padding-left:0.5rem;
+    padding-right:0.5rem; padding-top: 2rem; line-height: 1.5; font-size: 1.1em; min-height: 100vh; display: flex; flex-direction: column;">
+        <div style="flex: 1;">
         {%- endif %}
         <br>
         {% if !args.hide_header %}

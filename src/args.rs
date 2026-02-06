@@ -158,6 +158,22 @@ pub struct Args {
         default_value_t = 2048
     )]
     pub max_file_size_unencrypted_mb: usize,
+
+    // S3 storage options
+    #[clap(long, env = "MICROBIN_S3_ENDPOINT")]
+    pub s3_endpoint: Option<String>,
+
+    #[clap(long, env = "MICROBIN_S3_BUCKET")]
+    pub s3_bucket: Option<String>,
+
+    #[clap(long, env = "MICROBIN_S3_ACCESS_KEY")]
+    pub s3_access_key: Option<String>,
+
+    #[clap(long, env = "MICROBIN_S3_SECRET_KEY")]
+    pub s3_secret_key: Option<String>,
+
+    #[clap(long, env = "MICROBIN_S3_REGION", default_value = "us-west-000")]
+    pub s3_region: String,
 }
 
 impl Args {
@@ -227,7 +243,19 @@ impl Args {
             max_file_size_encrypted_mb: self.max_file_size_encrypted_mb,
             max_file_size_unencrypted_mb: self.max_file_size_unencrypted_mb,
             disable_update_checking: self.disable_update_checking,
+            s3_endpoint: None,
+            s3_bucket: None,
+            s3_access_key: None,
+            s3_secret_key: None,
+            s3_region: String::from(""),
         }
+    }
+
+    pub fn s3_enabled(&self) -> bool {
+        self.s3_endpoint.is_some()
+            && self.s3_bucket.is_some()
+            && self.s3_access_key.is_some()
+            && self.s3_secret_key.is_some()
     }
 }
 

@@ -36,7 +36,7 @@
 justify-content: center; align-items: center;">
   <div id="decryption">
     {% if pasta.encrypt_client %}
-    <label for="password-field" style="margin-bottom: 0.5em;">
+    <label id="decrypt-label" for="password-field" style="margin-bottom: 0.5em;">
       Please enter your key to decrypt this upload. <sup> <a href="{{ args.public_path_as_str() }}/guide#encryption">?</a></sup>
     </label>
     <input class="small-button" placeholder="Key" style="margin-right: 0.5rem" type="password" id="password-field"
@@ -54,7 +54,7 @@ justify-content: center; align-items: center;">
     <button class="small-button" id="download-button" style="margin-right:
   0.5rem">
       <b>
-        Download {{pasta.file.as_ref().unwrap().name()}}
+        Download {{pasta.file.as_ref().unwrap().display_name()}}
         [{{pasta.file.as_ref().unwrap().size}}]
       </b>
     </button>
@@ -103,7 +103,7 @@ justify-content: center; align-items: center;">
 {% if pasta.file.is_some() && !pasta.file_embeddable() && !pasta.encrypt_client %}
 <span style="margin-left: auto; margin-right: auto; display: flex;
     justify-content: center; align-items: center;">
-  <p style="font-size: small;">{{pasta.file.as_ref().unwrap().name()}}
+  <p style="font-size: small;">{{pasta.file.as_ref().unwrap().display_name()}}
     [{{pasta.file.as_ref().unwrap().size}}]</p>
   <a href="{{ args.public_path_as_str()}}/file/{{pasta.id_as_animals()}}" id="download-link">
     <button class="download-button" autofocus>
@@ -116,10 +116,19 @@ justify-content: center; align-items: center;">
 
 {% if pasta.file.is_some() && pasta.file.as_ref().unwrap().is_image() &&
 pasta.file_embeddable() && !pasta.encrypt_client %}
-<img id="embed" src="{{ args.public_path_as_str()}}/file/{{pasta.id_as_animals()}}" style="max-height: 50vh; max-width: 100%; height: auto; width: auto;" />
+<div class="image-container" id="image-container">
+  <div class="image-loading" id="image-loading">
+    <div class="loading-spinner"></div>
+    <span>Loading image...</span>
+  </div>
+  <img id="embed" src="{{ args.public_path_as_str()}}/file/{{pasta.id_as_animals()}}"
+       style="max-height: 50vh; max-width: 100%; height: auto; width: auto; display: none;"
+       onload="document.getElementById('image-loading').style.display='none'; this.style.display='block';"
+       onerror="document.getElementById('image-loading').innerHTML='<span style=\'color: #999;\'>Failed to load image</span>';" />
+</div>
 <span style="margin-left: auto; margin-right: auto; display: flex;
   justify-content: center; align-items: center;">
-  <p style="font-size: small;">{{pasta.file.as_ref().unwrap().name()}}
+  <p style="font-size: small;">{{pasta.file.as_ref().unwrap().display_name()}}
     [{{pasta.file.as_ref().unwrap().size}}]</p>
   <a href="{{ args.public_path_as_str()      }}/file/{{pasta.id_as_animals()}}" id="download-link" download>
     <button class="download-button" autofocus>
@@ -135,7 +144,7 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
 <video id="embed" controls src="{{ args.public_path_as_str()}}/file/{{pasta.id_as_animals()}}" height="300"></video>
 <span style="margin-left: auto; margin-right: auto; display: flex;
   justify-content: center; align-items: center;">
-  <p style="font-size: small;">{{pasta.file.as_ref().unwrap().name()}}
+  <p style="font-size: small;">{{pasta.file.as_ref().unwrap().display_name()}}
     [{{pasta.file.as_ref().unwrap().size}}]</p>
   <a href="{{ args.public_path_as_str()      }}/file/{{pasta.id_as_animals()}}" download id="download-link">
     <button class="download-button">
@@ -317,7 +326,7 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
     const tempAnchorEl = document.createElement('a');
     // tempAnchorEl.href = dataUri;
     tempAnchorEl.href = URL.createObjectURL(decryptedBlob);
-    tempAnchorEl.download = '{{pasta.file.as_ref().unwrap().name()}}';
+    tempAnchorEl.download = '{{pasta.file.as_ref().unwrap().display_name()}}';
 
     // Programmatically click anchor element to trigger download
     tempAnchorEl.click();
@@ -334,7 +343,14 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
       hljs.highlightAll();
       // {% endif  %}
       contentElement.innerHTML = wrapStringInCodeLines(contentElement.innerHTML);
-      decryptDiv.style.display = 'none';
+      // Hide text decryption UI but keep download button visible
+      const decryptLabel = document.getElementById('decrypt-label');
+      if (decryptLabel) decryptLabel.style.display = 'none';
+      if (decryptButton) decryptButton.style.display = 'none';
+      // Keep password field for file download, but hide if no file
+      if (!downloadButton) {
+        decryptDiv.style.display = 'none';
+      }
     }
   }
 
@@ -411,6 +427,10 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
     gap: 0.75rem;
   }
 
+  .toolbar-nav {
+    font-size: 1.1em;
+  }
+
   .pasta-toolbar a {
     text-decoration: none;
   }
@@ -466,6 +486,36 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+
+  .image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+  }
+
+  .image-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #2975D2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 
   .download-button {

@@ -1,0 +1,26 @@
+{% include "header.html" %}
+<div style="padding: 20px; max-width: 400px; margin: 0 auto;">
+    <h2>Sign In</h2>
+    <p>Please enter your password to save content.</p>
+    {% if status == "incorrect" %}
+    <p style="color: #d32f2f;">Incorrect password. Please try again.</p>
+    {% endif %}
+    <form method="post" action="{{ args.public_path_as_str() }}/login">
+        <div style="margin-bottom: 1rem;">
+            <label for="username">Username</label><br>
+            <input type="text" id="username" name="username" value="MicroBin"
+                autocomplete="username"
+                style="width: 100%; padding: 8px; box-sizing: border-box;" />
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label for="password">Password</label><br>
+            <input type="password" id="password" name="password"
+                autocomplete="current-password" required
+                style="width: 100%; padding: 8px; box-sizing: border-box;" />
+        </div>
+        <button type="submit" style="padding: 10px 20px; background-color: #2975D2; color: white; border: none; cursor: pointer;">
+            Sign In
+        </button>
+    </form>
+</div>
+{% include "footer.html" %}

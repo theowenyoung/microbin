@@ -1,4 +1,5 @@
 use crate::args::ARGS;
+use crate::util::storage;
 use linkify::{LinkFinder, LinkKind};
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 use qrcode_generator::QrCodeEcc;
@@ -38,28 +39,47 @@ pub fn remove_expired(pastas: &mut Vec<Pasta>) {
             // remove from database
             delete(None, Some(p.id));
 
-            // remove the file itself
+            // remove the file
             if let Some(file) = &p.file {
-                if fs::remove_file(format!(
-                    "{}/attachments/{}/{}",
-                    ARGS.data_dir,
-                    p.id_as_animals(),
-                    file.name()
-                ))
-                .is_err()
-                {
-                    log::error!("Failed to delete file {}!", file.name())
-                }
+                let pasta_id = p.id_as_animals();
 
-                // and remove the containing directory
-                if fs::remove_dir(format!(
-                    "{}/attachments/{}/",
-                    ARGS.data_dir,
-                    p.id_as_animals()
-                ))
-                .is_err()
-                {
-                    log::error!("Failed to delete directory {}!", file.name())
+                // Determine storage path based on file metadata
+                let storage_path = if p.encrypt_server {
+                    // Encrypted file
+                    if file.is_s3_encrypted() {
+                        format!("s3://attachments/{}/data.enc", pasta_id)
+                    } else {
+                        "data.enc".to_string()
+                    }
+                } else {
+                    // Non-encrypted - use stored path
+                    file.name().to_string()
+                };
+
+                if storage_path.starts_with("s3://") {
+                    // S3 file - spawn async task for deletion
+                    let pasta_id_clone = pasta_id.clone();
+                    let storage_path_clone = storage_path.clone();
+                    actix_web::rt::spawn(async move {
+                        if let Err(e) = storage::delete_file(&pasta_id_clone, &storage_path_clone).await {
+                            log::error!("Failed to delete S3 file {}: {}", storage_path_clone, e);
+                        }
+                    });
+                } else {
+                    // Local filesystem deletion
+                    let file_path = format!(
+                        "{}/attachments/{}/{}",
+                        ARGS.data_dir,
+                        pasta_id,
+                        storage_path
+                    );
+                    if fs::remove_file(&file_path).is_err() {
+                        log::error!("Failed to delete file {}!", file_path);
+                    }
+
+                    // and remove the containing directory
+                    let dir_path = format!("{}/attachments/{}/", ARGS.data_dir, pasta_id);
+                    let _ = fs::remove_dir(&dir_path);
                 }
             }
             false
@@ -126,6 +146,16 @@ pub fn encrypt_file(
     fs::remove_file(input_file_path)?;
 
     Ok(())
+}
+
+pub fn encrypt_bytes(data: &[u8], passphrase: &str) -> Vec<u8> {
+    let mc = new_magic_crypt!(passphrase, 256);
+    mc.encrypt_bytes_to_bytes(data)
+}
+
+pub fn decrypt_bytes(data: &[u8], passphrase: &str) -> Result<Vec<u8>, magic_crypt::MagicCryptError> {
+    let mc = new_magic_crypt!(passphrase, 256);
+    mc.decrypt_bytes_to_bytes(data)
 }
 
 pub fn decrypt_file(

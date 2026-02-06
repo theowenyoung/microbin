@@ -31,6 +31,7 @@ pub mod util {
     pub mod db_sqlite;
     pub mod hashids;
     pub mod misc;
+    pub mod storage;
     pub mod syntaxhighlighter;
     pub mod telemetry;
     pub mod version;
@@ -77,6 +78,17 @@ async fn main() -> std::io::Result<()> {
         ARGS.bind.to_string(),
         ARGS.port.to_string()
     );
+
+    // Log S3 storage status
+    if ARGS.s3_enabled() {
+        log::info!(
+            "S3 storage enabled: endpoint={}, bucket={}",
+            ARGS.s3_endpoint.as_ref().unwrap(),
+            ARGS.s3_bucket.as_ref().unwrap()
+        );
+    } else {
+        log::info!("S3 storage disabled, using local filesystem: {}", ARGS.data_dir);
+    }
 
     match fs::create_dir_all(format!("{}/public", ARGS.data_dir)) {
         Ok(dir) => dir,
@@ -140,6 +152,9 @@ async fn main() -> std::io::Result<()> {
                         HttpAuthentication::basic(util::auth::auth_validator),
                     ))
                     .service(create::index)
+                    .service(create::login_page)
+                    .service(create::login_page_with_status)
+                    .service(create::login_submit)
                     .service(auth_admin::auth_admin)
                     .service(auth_admin::auth_admin)
                     .service(auth_admin::auth_admin_with_status)

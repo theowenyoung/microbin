@@ -2,33 +2,55 @@ use crate::pasta::PastaFile;
 use crate::util::animalnumbers::to_animal_names;
 use crate::util::db::insert;
 use crate::util::hashids::to_hashids;
-use crate::util::misc::{encrypt, encrypt_file, is_valid_url};
+use crate::util::misc::{encrypt, encrypt_bytes, is_valid_url};
+use crate::util::storage;
 use crate::{AppState, Pasta, ARGS};
 use actix_multipart::Multipart;
+use actix_web::cookie::time::Duration;
+use actix_web::cookie::{Cookie, SameSite};
 use actix_web::error::ErrorBadRequest;
-use actix_web::cookie::Cookie;
-use actix_web::{get, web, Error, HttpResponse, Responder};
+use actix_web::{get, post, web, Error, HttpRequest, HttpResponse, Responder};
 use askama::Template;
 use bytesize::ByteSize;
 use futures::TryStreamExt;
 use log::warn;
 use rand::Rng;
-use std::io::Write;
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate<'a> {
     args: &'a ARGS,
+    has_uploader_cookie: bool,
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+struct LoginTemplate<'a> {
+    args: &'a ARGS,
     status: String,
 }
 
+/// Check if request has valid uploader cookie
+fn check_uploader_cookie(req: &HttpRequest) -> bool {
+    if !ARGS.readonly || ARGS.uploader_password.is_none() {
+        return false;
+    }
+    let expected_token =
+        generate_uploader_token(ARGS.uploader_password.as_ref().unwrap().trim());
+    req.cookie("uploader_token")
+        .map(|c| c.value() == expected_token)
+        .unwrap_or(false)
+}
+
 #[get("/")]
-pub async fn index() -> impl Responder {
+pub async fn index(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
         IndexTemplate {
             args: &ARGS,
-            status: String::from(""),
+            has_uploader_cookie: check_uploader_cookie(&req),
         }
         .render()
         .unwrap(),
@@ -36,17 +58,16 @@ pub async fn index() -> impl Responder {
 }
 
 #[get("/{status}")]
-pub async fn index_with_status(param: web::Path<String>) -> HttpResponse {
-    let status = param.into_inner();
-
-    return HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
+pub async fn index_with_status(req: HttpRequest, _param: web::Path<String>) -> HttpResponse {
+    // status parameter exists for URL compatibility but is not used in template
+    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
         IndexTemplate {
             args: &ARGS,
-            status,
+            has_uploader_cookie: check_uploader_cookie(&req),
         }
         .render()
         .unwrap(),
-    );
+    )
 }
 
 pub fn expiration_to_timestamp(expiration: &str, timenow: i64) -> i64 {
@@ -71,11 +92,88 @@ pub fn expiration_to_timestamp(expiration: &str, timenow: i64) -> i64 {
     }
 }
 
+/// Helper function to generate uploader token from password
+fn generate_uploader_token(password: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    hasher.update(b"microbin_uploader_salt_2024");
+    format!("{:x}", hasher.finalize())
+}
+
+#[derive(Deserialize)]
+pub struct UploaderLoginForm {
+    password: String,
+}
+
+/// Show login page
+#[get("/login")]
+pub async fn login_page() -> HttpResponse {
+    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
+        LoginTemplate {
+            args: &ARGS,
+            status: String::from(""),
+        }
+        .render()
+        .unwrap(),
+    )
+}
+
+/// Show login page with status
+#[get("/login/{status}")]
+pub async fn login_page_with_status(param: web::Path<String>) -> HttpResponse {
+    let status = param.into_inner();
+    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
+        LoginTemplate {
+            args: &ARGS,
+            status,
+        }
+        .render()
+        .unwrap(),
+    )
+}
+
+/// Handle login form submission
+#[post("/login")]
+pub async fn login_submit(form: web::Form<UploaderLoginForm>) -> HttpResponse {
+    if !ARGS.readonly || ARGS.uploader_password.is_none() {
+        return HttpResponse::Found()
+            .append_header(("Location", format!("{}/", ARGS.public_path_as_str())))
+            .finish();
+    }
+
+    let expected_password = ARGS.uploader_password.as_ref().unwrap().trim();
+
+    if form.password.trim() == expected_password {
+        // Password correct, set cookie and redirect to home
+        let token = generate_uploader_token(expected_password);
+        let cookie = Cookie::build("uploader_token", token)
+            .path("/")
+            .max_age(Duration::days(365 * 3))
+            .secure(true)
+            .same_site(SameSite::Strict)
+            .http_only(true)
+            .finish();
+
+        log::info!("Uploader login successful, setting cookie");
+        HttpResponse::Found()
+            .cookie(cookie)
+            .append_header(("Location", format!("{}/", ARGS.public_path_as_str())))
+            .finish()
+    } else {
+        // Password incorrect, show login page with error
+        log::warn!("Uploader login failed: incorrect password");
+        HttpResponse::Found()
+            .append_header(("Location", format!("{}/login/incorrect", ARGS.public_path_as_str())))
+            .finish()
+    }
+}
+
 /// receives a file through http Post on url /upload/a-b-c with a, b and c
 /// different animals. The client sends the post in response to a form.
-// TODO: form field order might need to be changed. In my testing the attachment 
-// data is nestled between password encryption key etc <21-10-24, dvdsk> 
+// TODO: form field order might need to be changed. In my testing the attachment
+// data is nestled between password encryption key etc <21-10-24, dvdsk>
 pub async fn create(
+    req: HttpRequest,
     data: web::Data<AppState>,
     mut payload: Multipart,
 ) -> Result<HttpResponse, Error> {
@@ -111,6 +209,7 @@ pub async fn create(
     let mut random_key: String = String::from("");
     let mut plain_key: String = String::from("");
     let mut uploader_password = String::from("");
+    let mut pending_file_data: Option<(PastaFile, Vec<u8>)> = None;
 
     while let Some(mut field) = payload.try_next().await? {
         let Some(field_name) = field.name() else {
@@ -234,36 +333,21 @@ pub async fn create(
                     }
                 };
 
-                std::fs::create_dir_all(format!(
-                    "{}/attachments/{}",
-                    ARGS.data_dir,
-                    &new_pasta.id_as_animals()
-                ))
-                .unwrap();
-
-                let filepath = format!(
-                    "{}/attachments/{}/{}",
-                    ARGS.data_dir,
-                    &new_pasta.id_as_animals(),
-                    &file.name()
-                );
-
-                let mut f = web::block(|| std::fs::File::create(filepath)).await??;
-                let mut size = 0;
+                let mut file_data: Vec<u8> = Vec::new();
                 while let Some(chunk) = field.try_next().await? {
-                    size += chunk.len();
+                    file_data.extend_from_slice(&chunk);
                     if (new_pasta.encrypt_server
-                        && size > ARGS.max_file_size_encrypted_mb * 1024 * 1024)
-                        || size > ARGS.max_file_size_unencrypted_mb * 1024 * 1024
+                        && file_data.len() > ARGS.max_file_size_encrypted_mb * 1024 * 1024)
+                        || file_data.len() > ARGS.max_file_size_unencrypted_mb * 1024 * 1024
                     {
                         return Err(ErrorBadRequest("File exceeded size limit."));
                     }
-                    f = web::block(move || f.write_all(&chunk).map(|_| f)).await??;
                 }
 
-                file.size = ByteSize::b(size as u64);
+                file.size = ByteSize::b(file_data.len() as u64);
 
-                new_pasta.file = Some(file);
+                // Store file data temporarily for later processing (after we know encryption settings)
+                pending_file_data = Some((file, file_data));
                 new_pasta.pasta_type = String::from("text");
             }
             field => {
@@ -272,11 +356,37 @@ pub async fn create(
         }
     }
 
+    // Track if we need to set the uploader cookie
+    let mut should_set_uploader_cookie = false;
+
     if ARGS.readonly && ARGS.uploader_password.is_some() {
-        if uploader_password.trim() != ARGS.uploader_password.as_ref().unwrap().trim() {
-            log::warn!("Uploader password mismatch. Input length: {}, Expected length: {}", uploader_password.trim().len(), ARGS.uploader_password.as_ref().unwrap().trim().len());
+        let expected_password = ARGS.uploader_password.as_ref().unwrap().trim();
+        let expected_token = generate_uploader_token(expected_password);
+
+        // Check if valid cookie exists
+        let has_valid_cookie = req
+            .cookie("uploader_token")
+            .map(|c| c.value() == expected_token)
+            .unwrap_or(false);
+
+        if has_valid_cookie {
+            // Cookie is valid, allow upload
+            log::info!("Uploader authenticated via cookie");
+        } else if uploader_password.trim() == expected_password {
+            // Password matches, set cookie for future requests
+            should_set_uploader_cookie = true;
+            log::info!("Uploader authenticated via password, will set cookie");
+        } else {
+            log::warn!(
+                "Uploader password mismatch. Input length: {}, Expected length: {}",
+                uploader_password.trim().len(),
+                expected_password.len()
+            );
             return Ok(HttpResponse::Found()
-                .append_header(("Location", format!("{}/incorrect", ARGS.public_path_as_str())))
+                .append_header((
+                    "Location",
+                    format!("{}/incorrect", ARGS.public_path_as_str()),
+                ))
                 .finish());
         }
     }
@@ -295,18 +405,46 @@ pub async fn create(
         }
     }
 
-    if new_pasta.file.is_some() && new_pasta.encrypt_server && !new_pasta.readonly {
-        let filepath = format!(
-            "{}/attachments/{}/{}",
-            ARGS.data_dir,
-            &new_pasta.id_as_animals(),
-            &new_pasta.file.as_ref().unwrap().name()
-        );
-        if new_pasta.encrypt_client {
-            encrypt_file(&random_key, &filepath).expect("Failed to encrypt file with random key")
+    // Process pending file data - encrypt in memory if needed, then save
+    if let Some((mut file, file_data)) = pending_file_data {
+        let pasta_id = new_pasta.id_as_animals();
+        let display_name = file.display_name().to_string();
+
+        if new_pasta.encrypt_server && !new_pasta.readonly {
+            // Encrypt file data in memory
+            let key = if new_pasta.encrypt_client {
+                &random_key
+            } else {
+                &plain_key
+            };
+            let encrypted_data = encrypt_bytes(&file_data, key);
+
+            // Save encrypted file directly as data.enc
+            let storage_path = storage::generate_storage_path(&pasta_id, "data.enc");
+            storage::save_file(&pasta_id, &storage_path, &encrypted_data)
+                .await
+                .expect("Failed to save encrypted file");
+
+            // Set file name with appropriate prefix for encrypted files
+            if ARGS.s3_enabled() {
+                file.name = format!("s3:{}", display_name);
+            } else {
+                file.name = display_name;
+            }
         } else {
-            encrypt_file(&plain_key, &filepath).expect("Failed to encrypt file with plain key")
+            // Save unencrypted file directly
+            let storage_path = storage::generate_storage_path(&pasta_id, &file.name);
+            storage::save_file(&pasta_id, &storage_path, &file_data)
+                .await
+                .expect("Failed to save file");
+
+            // Update file name with S3 path if using S3
+            if ARGS.s3_enabled() {
+                file.name = storage_path;
+            }
         }
+
+        new_pasta.file = Some(file);
     }
 
     let encrypt_server = new_pasta.encrypt_server;
@@ -325,10 +463,29 @@ pub async fn create(
         to_animal_names(id)
     };
 
+    // Build uploader cookie if needed (valid for 3 years, HTTPS only, SameSite Strict)
+    let uploader_cookie = if should_set_uploader_cookie {
+        let token = generate_uploader_token(ARGS.uploader_password.as_ref().unwrap().trim());
+        Some(
+            Cookie::build("uploader_token", token)
+                .path("/")
+                .max_age(Duration::days(365 * 3))
+                .secure(true)
+                .same_site(SameSite::Strict)
+                .http_only(true)
+                .finish(),
+        )
+    } else {
+        None
+    };
+
     if encrypt_server {
-        Ok(HttpResponse::Found()
-            .append_header(("Location", format!("/auth/{}/success", slug)))
-            .finish())
+        let mut builder = HttpResponse::Found();
+        builder.append_header(("Location", format!("/auth/{}/success", slug)));
+        if let Some(cookie) = uploader_cookie {
+            builder.cookie(cookie);
+        }
+        Ok(builder.finish())
     } else {
         // Generate time-limited token for initial view using Hashids
         let timenow = SystemTime::now()
@@ -336,21 +493,24 @@ pub async fn create(
             .unwrap()
             .as_secs();
         let expiry = timenow + 15; // 15 seconds validity
-        
+
         // Use global HARSH instance
         let encoded_token = crate::util::hashids::HARSH.encode(&[expiry, id]);
 
-        Ok(HttpResponse::Found()
-            .append_header((
-                "Location",
-                format!("{}/upload/{}", ARGS.public_path_as_str(), slug),
-            ))
-            .cookie(
-                Cookie::build("owner_token", encoded_token)
-                    .path("/")
-                    .max_age(actix_web::cookie::time::Duration::seconds(15))
-                    .finish(),
-            )
-            .finish())
+        let mut builder = HttpResponse::Found();
+        builder.append_header((
+            "Location",
+            format!("{}/upload/{}", ARGS.public_path_as_str(), slug),
+        ));
+        builder.cookie(
+            Cookie::build("owner_token", encoded_token)
+                .path("/")
+                .max_age(Duration::seconds(15))
+                .finish(),
+        );
+        if let Some(cookie) = uploader_cookie {
+            builder.cookie(cookie);
+        }
+        Ok(builder.finish())
     }
 }

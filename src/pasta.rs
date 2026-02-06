@@ -34,8 +34,37 @@ impl PastaFile {
         &self.name
     }
 
+    /// Check if this file is stored in S3 (non-encrypted)
+    pub fn is_s3(&self) -> bool {
+        self.name.starts_with("s3://")
+    }
+
+    /// Check if this encrypted file's data.enc is stored in S3
+    /// Format: "s3:originalname.ext"
+    pub fn is_s3_encrypted(&self) -> bool {
+        self.name.starts_with("s3:") && !self.name.starts_with("s3://")
+    }
+
+    /// Get the display filename (for Content-Disposition header)
+    pub fn display_name(&self) -> &str {
+        if self.name.starts_with("s3://") {
+            // s3://attachments/pasta-id/filename.ext -> filename.ext
+            self.name.rsplit('/').next().unwrap_or(&self.name)
+        } else if let Some(name) = self.name.strip_prefix("s3:") {
+            // s3:filename.ext -> filename.ext (encrypted in S3)
+            name
+        } else {
+            &self.name
+        }
+    }
+
+    /// Get the S3 object path (without s3:// prefix) for non-encrypted files
+    pub fn s3_path(&self) -> Option<&str> {
+        self.name.strip_prefix("s3://")
+    }
+
     pub fn is_image(&self) -> bool {
-        let lowercase_name = self.name.to_lowercase();
+        let lowercase_name = self.display_name().to_lowercase();
         let extensions = [
             ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".svg", ".tiff", ".tif",
             ".jfif", ".pjpeg", ".pjp", ".avif", ".jxl", ".heif",
@@ -44,7 +73,7 @@ impl PastaFile {
     }
 
     pub fn is_video(&self) -> bool {
-        let lowercase_name = self.name.to_lowercase();
+        let lowercase_name = self.display_name().to_lowercase();
         let extensions = [
             ".mp4", ".mov", ".wmv", ".webm", ".avi", ".flv", ".mkv", ".mts",
         ];

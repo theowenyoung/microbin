@@ -1,11 +1,11 @@
-use std::fs::File;
 use std::path::PathBuf;
 
 use crate::args::ARGS;
 use crate::util::auth;
 use crate::util::hashids::to_u64 as hashid_to_u64;
-use crate::util::misc::remove_expired;
-use crate::util::{animalnumbers::to_u64, misc::decrypt_file};
+use crate::util::misc::{decrypt_bytes, remove_expired};
+use crate::util::storage;
+use crate::util::animalnumbers::to_u64;
 use crate::AppState;
 use actix_multipart::Multipart;
 use actix_web::http::header;
@@ -41,21 +41,48 @@ pub async fn post_secure_file(
     }
 
     let password = auth::password_from_multipart(payload).await?;
+    log::info!("Received password/key length: {}, first chars: {}...",
+        password.len(),
+        password.chars().take(8).collect::<String>());
 
     if found {
         if let Some(ref pasta_file) = pastas[index].file {
-            let file = File::open(format!(
-                "{}/attachments/{}/data.enc",
-                ARGS.data_dir,
-                pastas[index].id_as_animals()
-            ))?;
+            let pasta_id = pastas[index].id_as_animals();
+            let display_name = pasta_file.display_name().to_string();
 
-            // Not compatible with NamedFile from actix_files (it needs a File
-            // to work therefore secure files do not support streaming
-            let decrypted_data: Vec<u8> = decrypt_file(&password, &file)?;
+            log::info!("Secure file download: pasta_id={}, file_name={}, is_s3_encrypted={}",
+                pasta_id, pasta_file.name(), pasta_file.is_s3_encrypted());
+
+            // Determine storage path for encrypted file (data.enc)
+            let storage_path = if pasta_file.is_s3_encrypted() {
+                // Encrypted file stored in S3
+                format!("s3://attachments/{}/data.enc", pasta_id)
+            } else {
+                // Encrypted file stored locally
+                "data.enc".to_string()
+            };
+
+            log::info!("Fetching encrypted file from: {}", storage_path);
+
+            // Get encrypted file data from storage
+            let encrypted_data = storage::get_file(&pasta_id, &storage_path)
+                .await
+                .map_err(|e| {
+                    log::error!("Failed to get file: {}", e);
+                    actix_web::error::ErrorNotFound(e)
+                })?;
+
+            log::info!("Got encrypted data, size={} bytes, attempting decrypt", encrypted_data.len());
+
+            // Decrypt the data
+            let decrypted_data = decrypt_bytes(&encrypted_data, &password)
+                .map_err(|e| {
+                    log::error!("Failed to decrypt: {:?}", e);
+                    actix_web::error::ErrorUnauthorized("Failed to decrypt file")
+                })?;
 
             // Set the content type based on the file extension
-            let content_type = mime_guess::from_path(&pasta_file.name)
+            let content_type = mime_guess::from_path(&display_name)
                 .first_or_octet_stream()
                 .to_string();
 
@@ -64,9 +91,8 @@ pub async fn post_secure_file(
                 .content_type(content_type)
                 .append_header((
                     "Content-Disposition",
-                    format!("attachment; filename=\"{}\"", pasta_file.name()),
+                    format!("attachment; filename=\"{}\"", display_name),
                 ))
-                // TODO: make streaming <21-10-24, dvdsk>
                 .body(decrypted_data);
             return Ok(response);
         }
@@ -114,27 +140,44 @@ pub async fn get_file(
                     .finish());
             }
 
-            // Construct the path to the file
-            let file_path = format!(
-                "{}/attachments/{}/{}",
-                ARGS.data_dir,
-                pastas[index].id_as_animals(),
-                pasta_file.name()
-            );
-            let file_path = PathBuf::from(file_path);
+            let pasta_id = pastas[index].id_as_animals();
+            let storage_path = pasta_file.name().to_string();
+            let display_name = pasta_file.display_name().to_string();
 
-            // This will stream the file and set the content type based on the
-            // file path
-            let file_reponse = actix_files::NamedFile::open(file_path)?;
-            let file_reponse = file_reponse.set_content_disposition(header::ContentDisposition {
-                disposition: header::DispositionType::Attachment,
-                parameters: vec![header::DispositionParam::Filename(
-                    pasta_file.name().to_string(),
-                )],
-            });
-            // This takes care of streaming/seeking using the Range
-            // header in the request.
-            return Ok(file_reponse.into_response(&request));
+            if pasta_file.is_s3() {
+                // File is stored in S3
+                let file_data = storage::get_file(&pasta_id, &storage_path)
+                    .await
+                    .map_err(|e| actix_web::error::ErrorNotFound(e))?;
+
+                let content_type = mime_guess::from_path(&display_name)
+                    .first_or_octet_stream()
+                    .to_string();
+
+                return Ok(HttpResponse::Ok()
+                    .content_type(content_type)
+                    .append_header((
+                        "Content-Disposition",
+                        format!("attachment; filename=\"{}\"", display_name),
+                    ))
+                    .body(file_data));
+            } else {
+                // File is stored locally - use NamedFile for streaming
+                let file_path = format!(
+                    "{}/attachments/{}/{}",
+                    ARGS.data_dir,
+                    pasta_id,
+                    storage_path
+                );
+                let file_path = PathBuf::from(file_path);
+
+                let file_response = actix_files::NamedFile::open(file_path)?;
+                let file_response = file_response.set_content_disposition(header::ContentDisposition {
+                    disposition: header::DispositionType::Attachment,
+                    parameters: vec![header::DispositionParam::Filename(display_name)],
+                });
+                return Ok(file_response.into_response(&request));
+            }
         }
     }
 
