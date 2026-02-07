@@ -4,12 +4,47 @@ on:
   push:
     tags:
     - v[0-9]+.[0-9]+.[0-9]+*
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v2.1.0-1). Leave empty to read from Cargo.toml.'
+        required: false
+        type: string
 
 jobs:
-  release:
-    name: Publish to Github Relases
+  resolve-tag:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
     outputs:
-      rc: ${{ steps.check-tag.outputs.rc }}
+      version: ${{ steps.resolve.outputs.version }}
+      rc: ${{ steps.resolve.outputs.rc }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve tag
+        id: resolve
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+            if [[ -z "$tag" ]]; then
+              tag="v$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')"
+            fi
+          else
+            tag="${GITHUB_REF##*/}"
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "rc=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "rc=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Resolved tag: $tag"
+
+  release:
+    name: Publish to Github Releases
+    needs: resolve-tag
+    outputs:
+      rc: ${{ needs.resolve-tag.outputs.rc }}
 
     strategy:
       matrix:
@@ -56,20 +91,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Check Tag
-      id: check-tag
-      shell: bash
-      run: |
-        tag=${GITHUB_REF##*/}
-        echo "::set-output name=version::$tag"
-        if [[ "$tag" =~ [0-9]+.[0-9]+.[0-9]+$ ]]; then
-          echo "::set-output name=rc::false"
-        else
-          echo "::set-output name=rc::true"
-        fi
-
+    - uses: actions/checkout@v4
 
     - name: Install Rust Toolchain Components
       uses: actions-rs/toolchain@v1
@@ -77,12 +99,12 @@ jobs:
         override: true
         target: ${{ matrix.target }}
         toolchain: stable
-        profile: minimal # minimal component installation (ie, no documentation)
-        
+        profile: minimal
+
     - name: Install OpenSSL
       if: runner.os == 'Linux'
       run: sudo apt-get install -y libssl-dev
-  
+
     - name: Show Version Information (Rust, cargo, GCC)
       shell: bash
       run: |
@@ -92,7 +114,7 @@ jobs:
         rustup default
         cargo -V
         rustc -V
-      
+
     - name: Build
       uses: actions-rs/cargo@v1
       with:
@@ -105,7 +127,7 @@ jobs:
       id: package
       env:
         target: ${{ matrix.target }}
-        version:  ${{ steps.check-tag.outputs.version }}
+        version: ${{ needs.resolve-tag.outputs.version }}
       run: |
         set -euxo pipefail
 
@@ -126,56 +148,57 @@ jobs:
         if [[ "$RUNNER_OS" == "Windows" ]]; then
             archive=$dist/$name.zip
             7z a $archive *
-            echo "::set-output name=archive::`pwd -W`/$name.zip"
+            echo "archive=$(pwd -W)/$name.zip" >> "$GITHUB_OUTPUT"
         else
             archive=$dist/$name.tar.gz
             tar czf $archive *
-            echo "::set-output name=archive::$archive"
+            echo "archive=$archive" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Publish Archive
-      uses: softprops/action-gh-release@v0.1.15
-      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ needs.resolve-tag.outputs.version }}
         draft: false
         files: ${{ steps.package.outputs.archive }}
-        prerelease: ${{ steps.check-tag.outputs.rc == 'true' }}
+        prerelease: ${{ needs.resolve-tag.outputs.rc == 'true' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     name: Publish to Docker Hub
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    needs: release
+    needs: [resolve-tag, release]
     steps:
+      - uses: actions/checkout@v4
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: owenyoung/microbin
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=${{ needs.resolve-tag.outputs.version }}
+            type=raw,value=latest
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
+          context: .
+          file: Dockerfile.prod
           build-args: |
             REPO=${{ github.repository }}
-            VER=${{ github.ref_name }}
+            VER=${{ needs.resolve-tag.outputs.version }}
           platforms: |
             linux/amd64
             linux/arm64
-          push: ${{ github.ref_type == 'tag' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
