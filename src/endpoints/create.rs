@@ -298,10 +298,12 @@ pub async fn create(
                 continue;
             }
             "content" => {
-                let mut content = String::from("");
+                let mut content_bytes: Vec<u8> = Vec::new();
                 while let Some(chunk) = field.try_next().await? {
-                    content.push_str(std::str::from_utf8(&chunk).unwrap().to_string().as_str());
+                    content_bytes.extend_from_slice(&chunk);
                 }
+                let content = String::from_utf8(content_bytes)
+                    .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
                 if !content.is_empty() {
                     new_pasta.content = content;
 
