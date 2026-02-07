@@ -1,43 +1,98 @@
 
 ![Screenshot](.github/index.png)
 
-# MicroBin
+# MicroBin (Fork)
 
-![Build](https://github.com/szabodanika/microbin/actions/workflows/rust.yml/badge.svg)
-[![crates.io](https://img.shields.io/crates/v/microbin.svg)](https://crates.io/crates/microbin)
-[![Docker Image](https://github.com/szabodanika/microbin/actions/workflows/release.yml/badge.svg)](https://hub.docker.com/r/danielszabo99/microbin)
-[![Docker Pulls](https://img.shields.io/docker/pulls/danielszabo99/microbin?label=Docker%20pulls)](https://img.shields.io/docker/pulls/danielszabo99/microbin?label=Docker%20pulls)
+A fork of [MicroBin](https://github.com/szabodanika/microbin) - a super tiny, feature-rich, configurable, self-contained and self-hosted paste bin web application.
 
-MicroBin is a super tiny, feature-rich, configurable, self-contained and self-hosted paste bin web application. It is very easy to set up and use, and will only require a few megabytes of memory and disk storage. It takes only a couple minutes to set it up, why not give it a try now?
+## What's New in This Fork
 
-### Check out the Public Test Server at [pub.microbin.eu](https://pub.microbin.eu)!
+- **S3 Storage** - Store file attachments in S3-compatible storage (AWS S3, Backblaze B2, MinIO, etc.) instead of local filesystem
+- **Markdown Rendering** - GitHub-style Markdown rendering with tables, code blocks, task lists, footnotes, and more
+- **HTML Rendering** - Sandboxed iframe display for HTML content
+- **Auto Content Detection** - Automatically detects Markdown, HTML, or code syntax and renders accordingly
 
-### Or host MicroBin yourself
+## Quick Start
 
-Run our quick docker setup script ([DockerHub](https://hub.docker.com/r/danielszabo99/microbin)):
-```bash
-bash <(curl -s https://microbin.eu/docker.sh)
-```
-
-Or install it manually from [Cargo](https://crates.io/crates/microbin):
+### Docker (recommended)
 
 ```bash
-cargo install microbin;
-curl -L -O https://raw.githubusercontent.com/szabodanika/microbin/master/.env;
-source .env;
-microbin
+docker run -d --name microbin \
+  -p 8080:8080 \
+  -v microbin-data:/app/microbin_data \
+  owenyoung/microbin:latest
 ```
 
-On our website [microbin.eu](https://microbin.eu), you will find the following:
+Or use Docker Compose:
 
-- [Screenshots](https://microbin.eu/screenshots/)
-- [Guide and Documentation](https://microbin.eu/docs/intro)
-- [Donations and Sponsorships](https://microbin.eu/sponsorship)
-- [Roadmap](https://microbin.eu/roadmap)
+```bash
+# Download config files
+curl -O https://raw.githubusercontent.com/theowenyoung/microbin/master/.env.example
+curl -O https://raw.githubusercontent.com/theowenyoung/microbin/master/compose.yaml
+cp .env.example .env
+# Edit .env with your preferred settings
+docker compose --env-file .env up -d
+```
+
+### From Source
+
+1. Copy the example env file and edit it with your settings:
+
+```bash
+cp .env.example .env
+# Edit .env with your preferred settings
+```
+
+2. Run the development server:
+
+```bash
+make dev
+```
+
+For release builds:
+
+```bash
+make release
+```
+
+## Configuration
+
+All configuration is via environment variables in `.env`. See `.env.example` for all available options with documentation.
+
+### S3 Storage
+
+To store file attachments in S3-compatible storage, configure these variables in your `.env`:
+
+```bash
+export MICROBIN_S3_ENDPOINT=https://s3.us-west-000.backblazeb2.com
+export MICROBIN_S3_BUCKET=your-bucket-name
+export MICROBIN_S3_ACCESS_KEY=your-access-key
+export MICROBIN_S3_SECRET_KEY=your-secret-key
+export MICROBIN_S3_REGION=us-west-000  # optional
+```
+
+All four settings (endpoint, bucket, access key, secret key) must be provided to enable S3 storage. When not configured, files are stored on the local filesystem.
+
+### Content Rendering
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MICROBIN_DEFAULT_SYNTAX` | `auto` | Default syntax selection. Use `auto` for automatic detection, `none` for plain text, or a language extension (e.g., `py`, `js`, `rs`) |
+| `MICROBIN_RENDER_MARKDOWN` | `false` | Enable Markdown rendering with GitHub-style formatting |
+| `MICROBIN_RENDER_HTML` | `false` | Enable HTML rendering in sandboxed iframe |
+
+When `MICROBIN_DEFAULT_SYNTAX=auto`:
+- **Markdown** content (headers, code blocks, lists, tables) is rendered like GitHub READMEs
+- **HTML** content (with DOCTYPE or multiple block elements) is displayed in a secure sandboxed iframe
+- **Code** is syntax-highlighted using highlight.js
 
 ## Features
 
 - Entirely self-contained executable, MicroBin is a single file!
+- S3-compatible object storage for file attachments
+- Markdown rendering with GitHub-style formatting
+- HTML rendering in sandboxed iframe
+- Automatic content type detection
 - Server-side and client-side encryption
 - File uploads (e.g. `server.com/file/pig-dog-cat`)
 - Raw text serving (e.g. `server.com/raw/pig-dog-cat`)
@@ -47,47 +102,17 @@ On our website [microbin.eu](https://microbin.eu), you will find the following:
 - SQLite and JSON database support
 - Private and public, editable and uneditable, automatically and never expiring uploads
 - Automatic dark mode and custom styling support with very little CSS and only vanilla JS (see [`water.css`](https://github.com/kognise/water.css))
-- **Markdown rendering** with GitHub-style formatting (tables, code blocks, task lists)
-- **HTML rendering** in sandboxed iframe for safe display
-- **Automatic content detection** - auto-detect Markdown, HTML, or code syntax
-- And much more!
 
-## What is an upload?
+## Build Commands
 
-In MicroBin, an upload can be:
+```bash
+make dev       # Run dev server (loads .env)
+make build     # Debug build
+make release   # Release build (LTO enabled, stripped)
+make test      # Run tests
+make clean     # Clean build artifacts
+```
 
-- A text that you want to paste from one machine to another, e.g. some code,
-- A file that you want to share, e.g. a video that is too large for Discord, a zip with a code project in it or an image,
-- A URL redirection.
-
-## When is MicroBin useful?
-
-You can use MicroBin:
-
-- To send long texts to other people,
-- To send large files to other people,
-- To share secrets or sensitive documents securely,
-- As a URL shortener/redirect service,
-- To serve content on the web, eg . configuration files for testing, images, or any other file content using the Raw functionality,
-- To move files between your desktop and a server you access from the console,
-- As a "postbox" service where people can upload their files or texts, but they cannot see or remove what others sent you,
-- Or even to take quick notes.
-
-...and many other things, why not get creative?
-
-## Content Rendering
-
-MicroBin supports automatic content detection and rendering:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MICROBIN_DEFAULT_SYNTAX` | `auto` | Default syntax selection. Use `auto` for automatic detection, `none` for plain text, or a language extension (e.g., `py`, `js`, `rs`) |
-| `MICROBIN_RENDER_MARKDOWN` | `true` | Enable Markdown rendering with GitHub-style formatting |
-| `MICROBIN_RENDER_HTML` | `false` | Enable HTML rendering in sandboxed iframe (disabled by default for security) |
-
-When `MICROBIN_DEFAULT_SYNTAX=auto`:
-- **Markdown** content (headers, code blocks, lists, tables) is rendered like GitHub READMEs
-- **HTML** content (with DOCTYPE or multiple block elements) is displayed in a secure sandboxed iframe
-- **Code** is syntax-highlighted using highlight.js
+## License
 
 MicroBin and MicroBin.eu are available under the [BSD 3-Clause License](LICENSE).
