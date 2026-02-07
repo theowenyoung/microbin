@@ -6,29 +6,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MicroBin is a self-contained pastebin and URL shortener web application written in Rust using the Actix-web framework. It supports text pastes, file uploads, URL redirects, encryption, expiration, and access control.
 
+## Versioning
+
+This is a fork of [szabodanika/microbin](https://github.com/szabodanika/microbin). Version format: `{upstream_version}-{fork_revision}`.
+
+- `2.1.0-1`, `2.1.0-2`, ... — fork revisions based on upstream 2.1.0
+- When merging a new upstream version, reset revision: `2.2.0-1`
+
+Version is defined in `Cargo.toml`. Bump it before tagging a release.
+
 ## Build & Development Commands
 
 ```bash
-# Build
-cargo build              # Debug build
-cargo build --release    # Release build (LTO enabled, stripped)
-
-# Run locally (reads configuration from .env)
-cargo run
-
-# Run tests
-cargo test
-
-# Lint
-cargo clippy
-
-# Install from source
-cargo install --path .
+make dev                 # Run dev server (loads .env)
+make build               # Debug build
+make release             # Release build (LTO enabled, stripped)
+make test                # Run tests
+make docker-push         # Build & push Docker image (owenyoung/microbin:latest)
+make tag                 # Tag with version from Cargo.toml and push to trigger CI
+make tag v=2.1.0-2       # Tag with a specific version
+cargo clippy             # Lint
 ```
 
 ## Configuration
 
-All configuration is via environment variables (see `.env` for full reference). Key settings:
+All configuration is via environment variables (see `.env.example` for full reference). Key settings:
 - `MICROBIN_PORT` / `MICROBIN_BIND` - Server binding
 - `MICROBIN_DATA_DIR` - Data storage location (default: `microbin_data`)
 - `MICROBIN_JSON_DB` - Use JSON storage instead of SQLite
