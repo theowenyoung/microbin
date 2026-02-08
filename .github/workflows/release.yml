@@ -153,9 +153,29 @@ jobs:
   docker:
     name: Publish to Docker Hub
     runs-on: ubuntu-latest
-    needs: [resolve-tag]
+    needs: [resolve-tag, release]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download amd64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-x86_64-unknown-linux-musl
+          path: /tmp/artifacts/amd64
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-aarch64-unknown-linux-musl
+          path: /tmp/artifacts/arm64
+
+      - name: Prepare binaries for Docker build
+        run: |
+          mkdir -p bin/amd64 bin/arm64
+          tar xzf /tmp/artifacts/amd64/*.tar.gz -C bin/amd64
+          tar xzf /tmp/artifacts/arm64/*.tar.gz -C bin/arm64
+          chmod +x bin/amd64/microbin bin/arm64/microbin
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -164,6 +184,7 @@ jobs:
           tags: |
             type=raw,value=${{ needs.resolve-tag.outputs.version }}
             type=raw,value=latest
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -173,14 +194,12 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.prod
-          build-args: |
-            REPO=${{ github.repository }}
-            VER=${{ needs.resolve-tag.outputs.version }}
+          file: Dockerfile.ci
           platforms: |
             linux/amd64
             linux/arm64

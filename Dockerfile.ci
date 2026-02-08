@@ -1,0 +1,42 @@
+# CI Dockerfile for MicroBin
+# Uses pre-built binary from the release job instead of compiling Rust.
+# This avoids slow QEMU-emulated Rust compilation for multi-arch builds.
+
+FROM bitnami/minideb:latest
+
+ARG TARGETARCH
+
+LABEL org.opencontainers.image.title="MicroBin" \
+      org.opencontainers.image.description="A tiny, self-contained pastebin and URL shortener" \
+      org.opencontainers.image.source="https://github.com/theowenyoung/microbin"
+
+WORKDIR /app
+
+# Copy the pre-built binary placed by CI for the matching architecture
+COPY bin/${TARGETARCH}/microbin /usr/bin/microbin
+RUN chmod +x /usr/bin/microbin
+
+# Create non-root user
+RUN groupadd -r microbin && \
+    useradd -r -g microbin -d /app -s /sbin/nologin microbin && \
+    mkdir -p /app/microbin_data && \
+    chown -R microbin:microbin /app
+
+USER microbin
+
+# Default environment variables for production
+ENV MICROBIN_PORT=3000 \
+    MICROBIN_BIND=0.0.0.0 \
+    MICROBIN_DATA_DIR=/app/microbin_data \
+    MICROBIN_GC_DAYS=90 \
+    MICROBIN_ENABLE_BURN_AFTER=true \
+    MICROBIN_ENABLE_READONLY=true \
+    MICROBIN_PRIVATE=true \
+    MICROBIN_DEFAULT_PRIVACY=unlisted
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/usr/bin/microbin", "--help"] || exit 1
+
+ENTRYPOINT ["microbin"]
