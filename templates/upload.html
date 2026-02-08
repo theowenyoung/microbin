@@ -154,7 +154,7 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
 </span>
 {%- endif %}
 
-<div>
+<div style="padding: 0 10px;">
   {% if args.show_read_stats %} {% if pasta.read_count == 1 %}
   <p style="font-size: small">Read {{pasta.read_count}} time, last
     {{pasta.last_read_time_ago_as_string()}}</p>
@@ -545,8 +545,12 @@ pasta.file_embeddable() && !pasta.encrypt_client %}
 
   /* Markdown rendered content styles */
   .markdown-body {
-    padding: 1rem;
+    padding: 0 10px;
     line-height: 1.6;
+  }
+
+  .markdown-body > *:first-child {
+    margin-top: 0;
   }
 
   .markdown-body h1, .markdown-body h2, .markdown-body h3,
