@@ -47,42 +47,20 @@ jobs:
     strategy:
       matrix:
         include:
-        - target: aarch64-unknown-linux-musl
-          os: ubuntu-latest
-          use-cross: true
-          cargo-flags: ""
-        - target: aarch64-apple-darwin
-          os: macos-latest
-          use-cross: true
-          cargo-flags: ""
-        - target: aarch64-pc-windows-msvc
-          os: windows-latest
-          use-cross: true
-          cargo-flags: "--no-default-features --features no-c-deps"
-        - target: x86_64-apple-darwin
-          os: macos-latest
-          cargo-flags: ""
-        - target: x86_64-pc-windows-msvc
-          os: windows-latest
-          cargo-flags: ""
         - target: x86_64-unknown-linux-musl
           os: ubuntu-latest
           use-cross: true
           cargo-flags: ""
-        - target: i686-unknown-linux-musl
+        - target: aarch64-unknown-linux-musl
           os: ubuntu-latest
-          use-cross: true
-          cargo-flags: ""
-        - target: i686-pc-windows-msvc
-          os: windows-latest
           use-cross: true
           cargo-flags: ""
         - target: armv7-unknown-linux-musleabihf
           os: ubuntu-latest
           use-cross: true
           cargo-flags: ""
-        - target: arm-unknown-linux-musleabihf
-          os: ubuntu-latest
+        - target: aarch64-apple-darwin
+          os: macos-latest
           use-cross: true
           cargo-flags: ""
 
@@ -135,23 +113,13 @@ jobs:
         name=$bin-$version-$target
         executable=target/$target/release/$bin
 
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          executable=$executable.exe
-        fi
-
         mkdir $dist
         cp $executable $dist
         cd $dist
 
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-            archive=$dist/$name.zip
-            7z a $archive *
-            echo "archive=$(pwd -W)/$name.zip" >> "$GITHUB_OUTPUT"
-        else
-            archive=$dist/$name.tar.gz
-            tar czf $archive *
-            echo "archive=$archive" >> "$GITHUB_OUTPUT"
-        fi
+        archive=$dist/$name.tar.gz
+        tar czf $archive *
+        echo "archive=$archive" >> "$GITHUB_OUTPUT"
 
     - name: Upload Archive
       uses: actions/upload-artifact@v4
@@ -177,9 +145,7 @@ jobs:
       with:
         tag_name: ${{ needs.resolve-tag.outputs.version }}
         draft: false
-        files: |
-          *.tar.gz
-          *.zip
+        files: "*.tar.gz"
         prerelease: ${{ needs.resolve-tag.outputs.rc == 'true' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
