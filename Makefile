@@ -57,7 +57,9 @@ patch:
 #   make tag                # tag with version from Cargo.toml (e.g. v2.1.0)
 #   make tag v=2.2.0        # tag with a specific version
 tag:
+	@if [ -n "$$(git status --porcelain)" ]; then echo "Error: working tree is not clean. Commit or stash changes first." && exit 1; fi
 	$(eval v ?= $(shell grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/'))
 	@echo "Tagging v$(v) and pushing to origin..."
+	git push origin master
 	git tag v$(v)
 	git push origin v$(v)
