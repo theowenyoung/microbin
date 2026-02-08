@@ -41,10 +41,8 @@ jobs:
           echo "Resolved tag: $tag"
 
   release:
-    name: Publish to Github Releases
+    name: Build release artifacts
     needs: resolve-tag
-    outputs:
-      rc: ${{ needs.resolve-tag.outputs.rc }}
 
     strategy:
       matrix:
@@ -155,12 +153,33 @@ jobs:
             echo "archive=$archive" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Publish Archive
+    - name: Upload Archive
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ matrix.target }}
+        path: ${{ steps.package.outputs.archive }}
+
+  publish:
+    name: Publish GitHub Release
+    needs: [resolve-tag, release]
+    runs-on: ubuntu-latest
+    outputs:
+      rc: ${{ needs.resolve-tag.outputs.rc }}
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: release-*
+        merge-multiple: true
+
+    - name: Publish Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ needs.resolve-tag.outputs.version }}
         draft: false
-        files: ${{ steps.package.outputs.archive }}
+        files: |
+          *.tar.gz
+          *.zip
         prerelease: ${{ needs.resolve-tag.outputs.rc == 'true' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -168,7 +187,7 @@ jobs:
   docker:
     name: Publish to Docker Hub
     runs-on: ubuntu-latest
-    needs: [resolve-tag, release]
+    needs: [resolve-tag, publish]
     steps:
       - uses: actions/checkout@v4
       - name: Docker meta
