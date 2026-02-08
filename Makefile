@@ -2,7 +2,7 @@ DOCKER_IMAGE := owenyoung/microbin
 DOCKER_TAG := latest
 DOCKER_PLATFORMS := linux/amd64,linux/arm64
 
-.PHONY: run dev build release clean test docker-push tag
+.PHONY: run dev build release clean test docker-push tag patch
 
 # Run the dev server (loads .env)
 run:
@@ -38,6 +38,18 @@ docker-push:
 	docker buildx build --platform $(DOCKER_PLATFORMS) \
 		-t $(DOCKER_IMAGE):$(DOCKER_TAG) \
 		-f Dockerfile.prod --push .
+
+# Bump the fork revision (e.g. 2.1.0-1 -> 2.1.0-2), update lock file, and commit.
+patch:
+	$(eval CURRENT := $(shell grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/'))
+	$(eval BASE := $(shell echo $(CURRENT) | sed 's/-[0-9]*$$//'))
+	$(eval REV := $(shell echo $(CURRENT) | sed 's/.*-//'))
+	$(eval NEXT := $(BASE)-$(shell echo $$(($(REV) + 1))))
+	@echo "Bumping version: $(CURRENT) -> $(NEXT)"
+	perl -i -pe 'if (!$$done && s/^version = ".*"/version = "$(NEXT)"/) { $$done = 1 }' Cargo.toml
+	cargo check --quiet
+	git add Cargo.toml Cargo.lock
+	git commit -m "v$(NEXT)"
 
 # Create a git tag and push it to trigger the CI release workflow.
 #
