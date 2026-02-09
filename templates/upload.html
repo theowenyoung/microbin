@@ -1,6 +1,6 @@
 {% include "header_minimal.html" %}
 <div class="shared-banner">
-  <span class="shared-label">Content shared via <a href="{{ args.public_path_as_str() }}/">MicroBin</a></span>
+  <span class="shared-label">Content shared via <a href="{{ args.public_path_as_str() }}/">{% if args.title.as_ref().is_some() %}{{ args.title.as_ref().unwrap() }}{% else %}MicroBin{% endif %}</a></span>
   <span class="pasta-ref">
     <a href="{{ args.public_path_as_str() }}/upload/{{pasta.id_as_animals()}}">{{pasta.id_as_animals()}}</a>
   </span>
