@@ -78,8 +78,10 @@ padding-right:0.5rem; line-height: 1.5; font-size: 1.1em; padding-top: 2rem; min
                 color: #888;
                 text-decoration: none;
             }
-            .site-nav a:hover {
-                color: #555;
+            .site-nav a:hover,
+            .site-nav a.active {
+                color: #333;
+                font-weight: 600;
             }
             @media (prefers-color-scheme: dark) {
                 .site-banner {
@@ -89,10 +91,20 @@ padding-right:0.5rem; line-height: 1.5; font-size: 1.1em; padding-top: 2rem; min
                 .site-nav a {
                     color: #7a8490;
                 }
-                .site-nav a:hover {
-                    color: #aab4c0;
+                .site-nav a:hover,
+                .site-nav a.active {
+                    color: #e0e0e0;
                 }
             }
         </style>
+        <script>
+            (function() {
+                var path = window.location.pathname.replace(/\/+$/, '');
+                document.querySelectorAll('.site-nav a').forEach(function(a) {
+                    var href = a.getAttribute('href').replace(/\/+$/, '');
+                    if (path === href) a.classList.add('active');
+                });
+            })();
+        </script>
 
         {%- endif %}
