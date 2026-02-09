@@ -46,7 +46,7 @@ pub struct Args {
     #[clap(long, env = "MICROBIN_HIGHLIGHTSYNTAX", default_value_t = true)]
     pub highlightsyntax: bool,
 
-    #[clap(long, env = "MICROBIN_DEFAULT_SYNTAX", default_value = "auto")]
+    #[clap(long, env = "MICROBIN_DEFAULT_SYNTAX", default_value = "md")]
     pub default_syntax: String,
 
     #[clap(long, env = "MICROBIN_RENDER_MARKDOWN", default_value_t = true)]

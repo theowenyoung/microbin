@@ -100,155 +100,38 @@
 
         {% if args.highlightsyntax %}
         <div>
-            <label for="syntax_highlight">Syntax <sup> <a href="{{ args.public_path_as_str() }}/guide#syntax">?</a></sup></label><br>
+            <label for="syntax_highlight">Format <sup> <a href="{{ args.public_path_as_str() }}/guide#syntax">?</a></sup></label><br>
             <select style="width: 100%;" name="syntax_highlight" id="syntax_highlight">
-                <optgroup label="Display Mode">
-                    {% if args.default_syntax == "none" %}
-                    <option selected value="none">None</option>
-                    {% else %}
-                    <option value="none">None</option>
-                    {% endif %}
-                    {% if args.default_syntax == "auto" %}
-                    <option selected value="auto">Automatic</option>
-                    {% else %}
-                    <option value="auto">Automatic</option>
-                    {% endif %}
-                </optgroup>
-                {% if args.render_markdown || args.render_html %}
-                <optgroup label="Rendered">
-                    {% if args.render_markdown %}
-                    {% if args.default_syntax == "md" %}
-                    <option selected value="md">Markdown</option>
-                    {% else %}
-                    <option value="md">Markdown</option>
-                    {% endif %}
-                    {% endif %}
-                    {% if args.render_html %}
-                    {% if args.default_syntax == "html" %}
-                    <option selected value="html">HTML (iframe)</option>
-                    {% else %}
-                    <option value="html">HTML (iframe)</option>
-                    {% endif %}
-                    {% endif %}
-                </optgroup>
+                {% if args.render_markdown %}
+                <option value="md" {% if args.default_syntax == "md" %}selected{% endif %}>Markdown</option>
                 {% endif %}
-                <optgroup label="Server-Rendered">
-                    {% if args.default_syntax == "sh" %}
-                    <option selected value="sh">Bash Shell</option>
-                    {% else %}
-                    <option value="sh">Bash Shell</option>
-                    {% endif %}
-                    {% if args.default_syntax == "c" %}
-                    <option selected value="c">C</option>
-                    {% else %}
-                    <option value="c">C</option>
-                    {% endif %}
-                    {% if args.default_syntax == "cpp" %}
-                    <option selected value="cpp">C++</option>
-                    {% else %}
-                    <option value="cpp">C++</option>
-                    {% endif %}
-                    {% if args.default_syntax == "cs" %}
-                    <option selected value="cs">C#</option>
-                    {% else %}
-                    <option value="cs">C#</option>
-                    {% endif %}
-                    {% if args.default_syntax == "pas" %}
-                    <option selected value="pas">Delphi</option>
-                    {% else %}
-                    <option value="pas">Delphi</option>
-                    {% endif %}
-                    {% if args.default_syntax == "erl" %}
-                    <option selected value="erl">Erlang</option>
-                    {% else %}
-                    <option value="erl">Erlang</option>
-                    {% endif %}
-                    {% if args.default_syntax == "go" %}
-                    <option selected value="go">Go</option>
-                    {% else %}
-                    <option value="go">Go</option>
-                    {% endif %}
-                    {% if args.default_syntax == "hs" %}
-                    <option selected value="hs">Haskell</option>
-                    {% else %}
-                    <option value="hs">Haskell</option>
-                    {% endif %}
-                    {% if args.default_syntax == "lua" %}
-                    <option selected value="lua">Lua</option>
-                    {% else %}
-                    <option value="lua">Lua</option>
-                    {% endif %}
-                    {% if args.default_syntax == "lisp" %}
-                    <option selected value="lisp">Lisp</option>
-                    {% else %}
-                    <option value="lisp">Lisp</option>
-                    {% endif %}
-                    {% if args.default_syntax == "java" %}
-                    <option selected value="java">Java</option>
-                    {% else %}
-                    <option value="java">Java</option>
-                    {% endif %}
-                    {% if args.default_syntax == "js" %}
-                    <option selected value="js">JavaScript</option>
-                    {% else %}
-                    <option value="js">JavaScript</option>
-                    {% endif %}
-                    {% if args.default_syntax == "kt" %}
-                    <option selected value="kt">Kotlin</option>
-                    {% else %}
-                    <option value="kt">Kotlin</option>
-                    {% endif %}
-                    {% if args.default_syntax == "py" %}
-                    <option selected value="py">Python</option>
-                    {% else %}
-                    <option value="py">Python</option>
-                    {% endif %}
-                    {% if args.default_syntax == "php" %}
-                    <option selected value="php">PHP</option>
-                    {% else %}
-                    <option value="php">PHP</option>
-                    {% endif %}
-                    {% if args.default_syntax == "r" %}
-                    <option selected value="r">R</option>
-                    {% else %}
-                    <option value="r">R</option>
-                    {% endif %}
-                    {% if args.default_syntax == "rs" %}
-                    <option selected value="rs">Rust</option>
-                    {% else %}
-                    <option value="rs">Rust</option>
-                    {% endif %}
-                    {% if args.default_syntax == "rb" %}
-                    <option selected value="rb">Ruby</option>
-                    {% else %}
-                    <option value="rb">Ruby</option>
-                    {% endif %}
-                    {% if args.default_syntax == "sc" %}
-                    <option selected value="sc">Scala</option>
-                    {% else %}
-                    <option value="sc">Scala</option>
-                    {% endif %}
-                    {% if args.default_syntax == "swift" %}
-                    <option selected value="swift">Swift</option>
-                    {% else %}
-                    <option value="swift">Swift</option>
-                    {% endif %}
-                    {% if args.default_syntax == "yaml" %}
-                    <option selected value="yaml">YAML</option>
-                    {% else %}
-                    <option value="yaml">YAML</option>
-                    {% endif %}
-                    {% if args.default_syntax == "json" %}
-                    <option selected value="json">JSON</option>
-                    {% else %}
-                    <option value="json">JSON</option>
-                    {% endif %}
-                    {% if args.default_syntax == "xml" %}
-                    <option selected value="xml">XML</option>
-                    {% else %}
-                    <option value="xml">XML</option>
-                    {% endif %}
-                </optgroup>
+                <option value="none" {% if args.default_syntax == "none" %}selected{% endif %}>Plain Text</option>
+                {% if args.render_html %}
+                <option value="html" {% if args.default_syntax == "html" %}selected{% endif %}>HTML (iframe)</option>
+                {% endif %}
+                <option value="sh" {% if args.default_syntax == "sh" %}selected{% endif %}>Bash Shell</option>
+                <option value="c" {% if args.default_syntax == "c" %}selected{% endif %}>C</option>
+                <option value="cpp" {% if args.default_syntax == "cpp" %}selected{% endif %}>C++</option>
+                <option value="cs" {% if args.default_syntax == "cs" %}selected{% endif %}>C#</option>
+                <option value="pas" {% if args.default_syntax == "pas" %}selected{% endif %}>Delphi</option>
+                <option value="erl" {% if args.default_syntax == "erl" %}selected{% endif %}>Erlang</option>
+                <option value="go" {% if args.default_syntax == "go" %}selected{% endif %}>Go</option>
+                <option value="hs" {% if args.default_syntax == "hs" %}selected{% endif %}>Haskell</option>
+                <option value="java" {% if args.default_syntax == "java" %}selected{% endif %}>Java</option>
+                <option value="js" {% if args.default_syntax == "js" %}selected{% endif %}>JavaScript</option>
+                <option value="json" {% if args.default_syntax == "json" %}selected{% endif %}>JSON</option>
+                <option value="kt" {% if args.default_syntax == "kt" %}selected{% endif %}>Kotlin</option>
+                <option value="lisp" {% if args.default_syntax == "lisp" %}selected{% endif %}>Lisp</option>
+                <option value="lua" {% if args.default_syntax == "lua" %}selected{% endif %}>Lua</option>
+                <option value="php" {% if args.default_syntax == "php" %}selected{% endif %}>PHP</option>
+                <option value="py" {% if args.default_syntax == "py" %}selected{% endif %}>Python</option>
+                <option value="r" {% if args.default_syntax == "r" %}selected{% endif %}>R</option>
+                <option value="rb" {% if args.default_syntax == "rb" %}selected{% endif %}>Ruby</option>
+                <option value="rs" {% if args.default_syntax == "rs" %}selected{% endif %}>Rust</option>
+                <option value="sc" {% if args.default_syntax == "sc" %}selected{% endif %}>Scala</option>
+                <option value="swift" {% if args.default_syntax == "swift" %}selected{% endif %}>Swift</option>
+                <option value="xml" {% if args.default_syntax == "xml" %}selected{% endif %}>XML</option>
+                <option value="yaml" {% if args.default_syntax == "yaml" %}selected{% endif %}>YAML</option>
             </select>
         </div>
         {%- else %}
@@ -291,7 +174,7 @@
         {% endif %}
 
         {% if args.readonly && !has_uploader_cookie %}
-        <button type="button" id="signin-button" style="padding: 0 20px; background-color: #2975D2; color: white; height: 32px; border: none; cursor: pointer; white-space: nowrap;">Sign in to Save</button>
+        <button type="button" id="signin-button" style="padding: 0 20px; background-color: #2975D2; color: white; height: 32px; border: none; cursor: pointer; white-space: nowrap;">Sign in to Share</button>
         {% else %}
         <input style="width: 140px; background-color: #2975D2; color: white;" id="submit-button" type="submit" value="Save" />
         {% endif %}
@@ -453,7 +336,7 @@
         sessionStorage.setItem('microbin_draft_settings', JSON.stringify(settings));
     }
 
-    // Show modal when clicking "Sign in to Save"
+    // Show modal when clicking "Sign in to Share"
     if (signinButton) {
         signinButton.addEventListener('click', function() {
             saveFormSettings();
@@ -683,6 +566,7 @@
     };
     // {%- endif %}
 
+
 </script>
 
 <style>
@@ -693,7 +577,7 @@
     #settings {
         display: grid;
         grid-gap: 10px;
-        grid-template-columns: repeat(auto-fit, 152px);
+        grid-template-columns: repeat(auto-fit, 132px);
         grid-template-rows: repeat(1, 90px);
         margin-bottom: 1rem;
     }

@@ -7,9 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::args::ARGS;
 use crate::util::animalnumbers::to_animal_names;
-use crate::util::contentrenderer::{
-    detect_content_type, prepare_html_for_iframe, render_markdown, ContentType,
-};
+use crate::util::contentrenderer::{prepare_html_for_iframe, render_markdown};
 use crate::util::hashids::to_hashids;
 use crate::util::syntaxhighlighter::html_highlight;
 
@@ -289,26 +287,12 @@ impl Pasta {
         html_escape::encode_text(&self.content).to_string()
     }
 
-    /// Detect the content type when extension is "auto"
-    pub fn detected_content_type(&self) -> ContentType {
-        if self.encrypt_client || self.encrypt_server {
-            return ContentType::PlainText; // Never render encrypted content
-        }
-        detect_content_type(&self.content)
-    }
-
     /// Check if content should be rendered as markdown
     pub fn should_render_markdown(&self) -> bool {
         if !ARGS.render_markdown || self.encrypt_client || self.encrypt_server {
             return false;
         }
-        if self.extension == "md" || self.extension == "markdown" {
-            return true;
-        }
-        if self.extension == "auto" {
-            return self.detected_content_type() == ContentType::Markdown;
-        }
-        false
+        self.extension == "md" || self.extension == "markdown"
     }
 
     /// Check if content should be rendered as HTML
@@ -316,13 +300,7 @@ impl Pasta {
         if !ARGS.render_html || self.encrypt_client || self.encrypt_server {
             return false;
         }
-        if self.extension == "html" || self.extension == "htm" {
-            return true;
-        }
-        if self.extension == "auto" {
-            return self.detected_content_type() == ContentType::Html;
-        }
-        false
+        self.extension == "html" || self.extension == "htm"
     }
 
     /// Render content as markdown HTML

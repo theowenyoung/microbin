@@ -1165,36 +1165,6 @@ tbody tr:nth-child(2n) button:hover {
   color: var(--text-bright)
 }
 
-::selection {
-  background-color: #9e9e9e;
-  background-color: var(--selection);
-  color: #000;
-  color: var(--text-bright)
-}
-
-@media (prefers-color-scheme:dark) {
-  ::-moz-selection {
-    color: #fff;
-    color: var(--text-bright)
-  }
-
-  ::selection {
-    color: #fff;
-    color: var(--text-bright)
-  }
-}
-
-@media (prefers-color-scheme:dark) {
-  ::-moz-selection {
-    background-color: #1c76c5;
-    background-color: var(--selection)
-  }
-
-  ::selection {
-    background-color: #1c76c5;
-    background-color: var(--selection)
-  }
-}
 
 details {
   display: flex;

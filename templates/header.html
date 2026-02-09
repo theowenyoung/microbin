@@ -35,19 +35,64 @@ padding-right:0.5rem; line-height: 1.5; font-size: 1.1em; padding-top: 2rem; min
         <br>
         {% if !args.hide_header %}
 
-        <div id="nav" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; font-size: 0.9em; padding: 0 10px;">
-            {% if !args.hide_logo %}
-            <a href="{{ args.public_path_as_str() }}"><img width=80 style="margin-bottom: -4px;" src="{{ args.public_path_as_str() }}/static/logo.png"></a>
-            {%- endif %}
-            {% if args.title.as_ref().is_some() %}
-            <span style="font-weight: 500;">{{ args.title.as_ref().unwrap() }}</span>
-            {%- endif %}
-            <a href="{{ args.public_path_as_str() }}/">New</a>
-            {% if !args.no_listing %}
-            <a href="{{ args.public_path_as_str() }}/list">List</a>
-            {%- endif %}
+        <div class="site-banner">
+            <span class="site-label">
+                {% if !args.hide_logo %}
+                <a href="{{ args.public_path_as_str() }}/"><img width=60 src="{{ args.public_path_as_str() }}/static/logo.png" style="vertical-align: middle; margin-right: 0.25rem;"></a>
+                {%- endif %}
+                {% if args.title.as_ref().is_some() %}
+                <a href="{{ args.public_path_as_str() }}/">{{ args.title.as_ref().unwrap() }}</a>
+                {%- else %}
+                <a href="{{ args.public_path_as_str() }}/">MicroBin</a> · Paste &amp; Share
+                {%- endif %}
+            </span>
+            <span class="site-nav">
+                <a href="{{ args.public_path_as_str() }}/">New</a>
+                {% if !args.no_listing %}
+                <a href="{{ args.public_path_as_str() }}/list">List</a>
+                {%- endif %}
+            </span>
         </div>
 
-        <!-- <hr> -->
+        <style>
+            .site-banner {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.6rem 10px;
+                margin-bottom: 0.75rem;
+                font-size: 0.85em;
+                color: #888;
+                border-bottom: 1px solid #eee;
+            }
+            .site-label a {
+                color: inherit;
+                text-decoration: none;
+                font-weight: 600;
+            }
+            .site-nav {
+                display: flex;
+                gap: 0.75rem;
+            }
+            .site-nav a {
+                color: #888;
+                text-decoration: none;
+            }
+            .site-nav a:hover {
+                color: #555;
+            }
+            @media (prefers-color-scheme: dark) {
+                .site-banner {
+                    color: #7a8490;
+                    border-bottom-color: #21262d;
+                }
+                .site-nav a {
+                    color: #7a8490;
+                }
+                .site-nav a:hover {
+                    color: #aab4c0;
+                }
+            }
+        </style>
 
         {%- endif %}
