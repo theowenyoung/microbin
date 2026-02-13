@@ -101,7 +101,7 @@ padding-right:0.5rem; line-height: 1.5; font-size: 1.1em; padding-top: 2rem; min
             (function() {
                 var path = window.location.pathname.replace(/\/+$/, '');
                 document.querySelectorAll('.site-nav a').forEach(function(a) {
-                    var href = a.getAttribute('href').replace(/\/+$/, '');
+                    var href = a.pathname.replace(/\/+$/, '');
                     if (path === href) a.classList.add('active');
                 });
             })();
