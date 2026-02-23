@@ -211,6 +211,7 @@ pub async fn create(
         last_read: timenow,
         pasta_type: String::from(""),
         expiration: expiration_to_timestamp(&ARGS.default_expiry, timenow),
+        title: None,
     };
 
     let mut random_key: String = String::from("");
@@ -399,6 +400,8 @@ pub async fn create(
                 .finish());
         }
     }
+
+    new_pasta.title = Pasta::extract_title(&new_pasta.content, &new_pasta.extension);
 
     let id = new_pasta.id;
 

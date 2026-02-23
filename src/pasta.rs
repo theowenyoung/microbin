@@ -101,9 +101,28 @@ pub struct Pasta {
     pub read_count: u64,
     pub burn_after_reads: u64,
     pub pasta_type: String,
+    #[serde(default)]
+    pub title: Option<String>,
 }
 
 impl Pasta {
+    pub fn extract_title(content: &str, extension: &str) -> Option<String> {
+        if extension != "md" && extension != "markdown" {
+            return None;
+        }
+        let line = content.lines().find(|l| !l.trim().is_empty())?;
+        let title = line.trim_start_matches('#').trim();
+        if title.is_empty() {
+            return None;
+        }
+        if title.chars().count() > 80 {
+            let truncated: String = title.chars().take(80).collect();
+            Some(format!("{}...", truncated))
+        } else {
+            Some(title.to_string())
+        }
+    }
+
     pub fn id_as_animals(&self) -> String {
         if ARGS.hash_ids {
             to_hashids(self.id)

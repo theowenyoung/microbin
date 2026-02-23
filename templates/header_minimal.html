@@ -2,10 +2,14 @@
 <html>
 
 <head>
-    {% if args.title.as_ref().is_none() %}
-    <title>MicroBin</title>
-    {%- else %}
+    {% if pasta.title.is_some() && args.title.as_ref().is_some() %}
+    <title>{{ pasta.title.as_ref().unwrap() }} - {{ args.title.as_ref().unwrap() }}</title>
+    {%- else if pasta.title.is_some() %}
+    <title>{{ pasta.title.as_ref().unwrap() }} - MicroBin</title>
+    {%- else if args.title.as_ref().is_some() %}
     <title>{{ args.title.as_ref().unwrap() }}</title>
+    {%- else %}
+    <title>MicroBin</title>
     {%- endif %}
 
     <meta charset="utf-8">

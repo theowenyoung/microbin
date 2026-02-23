@@ -258,6 +258,7 @@ pub async fn post_submit_edit_private(
                 pastas[index]
                     .content
                     .replace_range(.., &encrypt(&new_content, &password));
+                pastas[index].title = Pasta::extract_title(&new_content, &pastas[index].extension);
             } else {
                 return Ok(HttpResponse::Found()
                     .append_header((
@@ -272,6 +273,7 @@ pub async fn post_submit_edit_private(
                 pastas[index]
                     .content
                     .replace_range(.., &encrypt(&new_content, &password));
+                pastas[index].title = Pasta::extract_title(&new_content, &pastas[index].extension);
                 // save pasta in database
                 update(Some(&pastas), Some(&pastas[index]));
             } else {
@@ -340,6 +342,7 @@ pub async fn post_edit(
                         let res = decrypt(pastas[i].encrypted_key.as_ref().unwrap(), &password);
                         if res.is_ok() {
                             pastas[i].content.replace_range(.., &new_content);
+                            pastas[i].title = Pasta::extract_title(&pastas[i].content, &pastas[i].extension);
                             // save pasta in database
                             update(Some(&pastas), Some(&pastas[i]));
                         } else {
@@ -360,6 +363,7 @@ pub async fn post_edit(
                     }
                 } else {
                     pastas[i].content.replace_range(.., &new_content);
+                    pastas[i].title = Pasta::extract_title(&pastas[i].content, &pastas[i].extension);
                     // save pasta in database
                     update(Some(&pastas), Some(&pastas[i]));
                 }

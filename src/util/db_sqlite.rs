@@ -42,7 +42,8 @@ pub fn rewrite_all_to_db(pasta_data: &[Pasta]) {
             last_read INTEGER NOT NULL,
             read_count INTEGER NOT NULL,
             burn_after_reads INTEGER NOT NULL,
-            pasta_type TEXT NOT NULL
+            pasta_type TEXT NOT NULL,
+            title TEXT
         );",
         params![],
     )
@@ -67,8 +68,9 @@ pub fn rewrite_all_to_db(pasta_data: &[Pasta]) {
                 last_read,
                 read_count,
                 burn_after_reads,
-                pasta_type
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+                pasta_type,
+                title
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
             params![
                 pasta.id,
                 pasta.content,
@@ -87,6 +89,7 @@ pub fn rewrite_all_to_db(pasta_data: &[Pasta]) {
                 pasta.read_count,
                 pasta.burn_after_reads,
                 pasta.pasta_type,
+                pasta.title.as_deref().unwrap_or(""),
             ],
         )
         .expect("Failed to insert pasta.");
@@ -116,18 +119,23 @@ pub fn select_all_from_db() -> Vec<Pasta> {
             last_read INTEGER NOT NULL,
             read_count INTEGER NOT NULL,
             burn_after_reads INTEGER NOT NULL,
-            pasta_type TEXT NOT NULL
+            pasta_type TEXT NOT NULL,
+            title TEXT
         );",
         params![],
     )
     .expect("Failed to create SQLite table for Pasta!");
 
+    // Add title column if it doesn't exist (migration for existing databases)
+    let _ = conn.execute("ALTER TABLE pasta ADD COLUMN title TEXT", params![]);
+
     let mut stmt = conn
-        .prepare("SELECT * FROM pasta ORDER BY created ASC")
+        .prepare("SELECT id, content, file_name, file_size, extension, read_only, private, editable, encrypt_server, encrypt_client, encrypted_key, created, expiration, last_read, read_count, burn_after_reads, pasta_type, title FROM pasta ORDER BY created ASC")
         .expect("Failed to prepare SQL statement to load pastas");
 
     let pasta_iter = stmt
         .query_map([], |row| {
+            let title: Option<String> = row.get(17)?;
             Ok(Pasta {
                 id: row.get(0)?,
                 content: row.get(1)?,
@@ -157,6 +165,7 @@ pub fn select_all_from_db() -> Vec<Pasta> {
                 read_count: row.get(14)?,
                 burn_after_reads: row.get(15)?,
                 pasta_type: row.get(16)?,
+                title: title.filter(|s| !s.is_empty()),
             })
         })
         .expect("Failed to select Pastas from SQLite database.");
@@ -189,7 +198,8 @@ pub fn insert(pasta: &Pasta) {
             last_read INTEGER NOT NULL,
             read_count INTEGER NOT NULL,
             burn_after_reads INTEGER NOT NULL,
-            pasta_type TEXT NOT NULL
+            pasta_type TEXT NOT NULL,
+            title TEXT
         );",
         params![],
     )
@@ -213,8 +223,9 @@ pub fn insert(pasta: &Pasta) {
                 last_read,
                 read_count,
                 burn_after_reads,
-                pasta_type
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+                pasta_type,
+                title
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
         params![
             pasta.id,
             pasta.content,
@@ -233,6 +244,7 @@ pub fn insert(pasta: &Pasta) {
             pasta.read_count,
             pasta.burn_after_reads,
             pasta.pasta_type,
+            pasta.title.as_deref().unwrap_or(""),
         ],
     )
     .expect("Failed to insert pasta.");
@@ -259,7 +271,8 @@ pub fn update(pasta: &Pasta) {
             last_read = ?14,
             read_count = ?15,
             burn_after_reads = ?16,
-            pasta_type = ?17
+            pasta_type = ?17,
+            title = ?18
         WHERE id = ?1;",
         params![
             pasta.id,
@@ -279,6 +292,7 @@ pub fn update(pasta: &Pasta) {
             pasta.read_count,
             pasta.burn_after_reads,
             pasta.pasta_type,
+            pasta.title.as_deref().unwrap_or(""),
         ],
     )
     .expect("Failed to update pasta.");
