@@ -206,3 +206,24 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Trigger studio deployment
+        if: needs.resolve-tag.outputs.rc != 'true'
+        env:
+          BUILD_REPO_TOKEN: ${{ secrets.BUILD_REPO_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${BUILD_REPO_TOKEN}" \
+            https://api.github.com/repos/tonormal/build/dispatches \
+            -d "$(jq -nc \
+              --arg service "microbin" \
+              --arg source_sha "${{ github.sha }}" \
+              '{
+                event_type: "deploy-external-app",
+                client_payload: {
+                  service: $service,
+                  source_sha: $source_sha
+                }
+              }'
+            )"
