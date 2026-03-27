@@ -15,7 +15,7 @@ use askama::Template;
 
 #[get("/remove/{id}")]
 pub async fn remove(data: web::Data<AppState>, id: web::Path<String>) -> HttpResponse {
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     let id = if ARGS.hash_ids {
         hashid_to_u64(&id).unwrap_or(0)
@@ -31,7 +31,11 @@ pub async fn remove(data: web::Data<AppState>, id: web::Path<String>) -> HttpRes
                 return HttpResponse::Found()
                     .append_header((
                         "Location",
-                        format!("{}/auth_remove_private/{}", ARGS.public_path_as_str(), pasta.id_as_animals()),
+                        format!(
+                            "{}/auth_remove_private/{}",
+                            ARGS.public_path_as_str(),
+                            pasta.id_as_animals()
+                        ),
                     ))
                     .finish();
             }
@@ -49,7 +53,7 @@ pub async fn remove(data: web::Data<AppState>, id: web::Path<String>) -> HttpRes
                 }
 
                 // Re-acquire lock
-                pastas = data.pastas.lock().unwrap();
+                pastas = data.lock_pastas();
 
                 // Find the pasta again (index may have changed)
                 let mut new_index = None;
@@ -111,7 +115,7 @@ pub async fn post_remove(
     let redirect_to_upload: bool;
 
     {
-        let mut pastas = data.pastas.lock().unwrap();
+        let mut pastas = data.lock_pastas();
         remove_expired(&mut pastas);
 
         let pasta = pastas.iter().find(|p| p.id == id);
@@ -192,7 +196,11 @@ pub async fn post_remove(
         return Ok(HttpResponse::Found()
             .append_header((
                 "Location",
-                format!("{}/auth_remove_private/{}/incorrect", ARGS.public_path_as_str(), pasta_animals),
+                format!(
+                    "{}/auth_remove_private/{}/incorrect",
+                    ARGS.public_path_as_str(),
+                    pasta_animals
+                ),
             ))
             .finish());
     }
@@ -206,7 +214,7 @@ pub async fn post_remove(
 
     // Re-acquire lock and remove from list
     {
-        let mut pastas = data.pastas.lock().unwrap();
+        let mut pastas = data.lock_pastas();
         if let Some(idx) = pastas.iter().position(|p| p.id == id) {
             pastas.remove(idx);
         }
@@ -214,9 +222,6 @@ pub async fn post_remove(
     }
 
     Ok(HttpResponse::Found()
-        .append_header((
-            "Location",
-            format!("{}/list", ARGS.public_path_as_str()),
-        ))
+        .append_header(("Location", format!("{}/list", ARGS.public_path_as_str())))
         .finish())
 }

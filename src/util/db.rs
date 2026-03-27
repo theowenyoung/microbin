@@ -22,12 +22,13 @@ pub fn read_all() -> Vec<Pasta> {
 }
 
 #[allow(unused)]
-pub fn insert(pastas: Option<&Vec<Pasta>>, pasta: Option<&Pasta>) {
+pub fn insert(pastas: Option<&Vec<Pasta>>, pasta: Option<&Pasta>) -> Result<(), String> {
     if ARGS.json_db {
-        super::db_json::update_all(pastas.expect("Called insert() without passing Pasta vector"));
+        super::db_json::update_all(pastas.expect("Called insert() without passing Pasta vector"))
     } else {
         #[cfg(feature = "default")]
-        super::db_sqlite::insert(pasta.expect("Called insert() without passing new Pasta"));
+        return super::db_sqlite::insert(pasta.expect("Called insert() without passing new Pasta"))
+            .map_err(|error| format!("Failed to insert pasta into SQLite: {error}"));
         #[cfg(not(feature = "default"))]
         panic!();
     }
@@ -36,10 +37,18 @@ pub fn insert(pastas: Option<&Vec<Pasta>>, pasta: Option<&Pasta>) {
 #[allow(unused)]
 pub fn update(pastas: Option<&Vec<Pasta>>, pasta: Option<&Pasta>) {
     if ARGS.json_db {
-        super::db_json::update_all(pastas.expect("Called update() without passing Pasta vector"));
+        if let Err(error) = super::db_json::update_all(
+            pastas.expect("Called update() without passing Pasta vector"),
+        ) {
+            log::error!("Failed to update JSON database: {}", error);
+        }
     } else {
         #[cfg(feature = "default")]
-        super::db_sqlite::update(pasta.expect("Called insert() without passing Pasta to update"));
+        if let Err(error) = super::db_sqlite::update(
+            pasta.expect("Called insert() without passing Pasta to update"),
+        ) {
+            log::error!("Failed to update pasta in SQLite: {}", error);
+        }
         #[cfg(not(feature = "default"))]
         panic!("{}", PANIC_MSG);
     }
@@ -48,10 +57,14 @@ pub fn update(pastas: Option<&Vec<Pasta>>, pasta: Option<&Pasta>) {
 #[allow(unused)]
 pub fn update_all(pastas: &Vec<Pasta>) {
     if ARGS.json_db {
-        super::db_json::update_all(pastas);
+        if let Err(error) = super::db_json::update_all(pastas) {
+            log::error!("Failed to rewrite JSON database: {}", error);
+        }
     } else {
         #[cfg(feature = "default")]
-        super::db_sqlite::update_all(pastas);
+        if let Err(error) = super::db_sqlite::update_all(pastas) {
+            log::error!("Failed to rewrite SQLite database: {}", error);
+        }
         #[cfg(not(feature = "default"))]
         panic!("{}", PANIC_MSG);
     }
@@ -60,10 +73,18 @@ pub fn update_all(pastas: &Vec<Pasta>) {
 #[allow(unused)]
 pub fn delete(pastas: Option<&Vec<Pasta>>, id: Option<u64>) {
     if ARGS.json_db {
-        super::db_json::update_all(pastas.expect("Called delete() without passing Pasta vector"));
+        if let Err(error) = super::db_json::update_all(
+            pastas.expect("Called delete() without passing Pasta vector"),
+        ) {
+            log::error!("Failed to update JSON database during delete: {}", error);
+        }
     } else {
         #[cfg(feature = "default")]
-        super::db_sqlite::delete_by_id(id.expect("Called delete() without passing Pasta id"));
+        if let Err(error) =
+            super::db_sqlite::delete_by_id(id.expect("Called delete() without passing Pasta id"))
+        {
+            log::error!("Failed to delete pasta from SQLite: {}", error);
+        }
         #[cfg(not(feature = "default"))]
         panic!("{}", PANIC_MSG);
     }

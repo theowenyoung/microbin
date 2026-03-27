@@ -16,7 +16,7 @@ use env_logger::Builder;
 use log::LevelFilter;
 use std::fs;
 use std::io::Write;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 pub mod args;
 pub mod pasta;
@@ -30,12 +30,12 @@ pub mod util {
     #[cfg(feature = "default")]
     pub mod db_sqlite;
     pub mod hashids;
+    pub mod http_client;
     pub mod misc;
     pub mod storage;
     pub mod syntaxhighlighter;
     pub mod telemetry;
     pub mod version;
-    pub mod http_client;
 }
 
 pub mod endpoints {
@@ -56,6 +56,18 @@ pub mod endpoints {
 
 pub struct AppState {
     pub pastas: Mutex<Vec<Pasta>>,
+}
+
+impl AppState {
+    pub fn lock_pastas(&self) -> MutexGuard<'_, Vec<Pasta>> {
+        self.pastas.lock().unwrap_or_else(|error| {
+            log::error!(
+                "Pasta store mutex poisoned; recovering in-memory state: {}",
+                error
+            );
+            error.into_inner()
+        })
+    }
 }
 
 #[actix_web::main]
@@ -87,7 +99,10 @@ async fn main() -> std::io::Result<()> {
             ARGS.s3_bucket.as_ref().unwrap()
         );
     } else {
-        log::info!("S3 storage disabled, using local filesystem: {}", ARGS.data_dir);
+        log::info!(
+            "S3 storage disabled, using local filesystem: {}",
+            ARGS.data_dir
+        );
     }
 
     match fs::create_dir_all(format!("{}/public", ARGS.data_dir)) {
@@ -169,7 +184,7 @@ async fn main() -> std::io::Result<()> {
                     .service(remove::post_remove)
                     .service(list::list)
                     .service(web::resource("/upload").route(web::post().to(create::create)))
-                    .service(create::index_with_status)
+                    .service(create::index_with_status),
             )
             .default_service(web::route().to(errors::not_found))
     })

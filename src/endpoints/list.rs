@@ -21,19 +21,21 @@ pub async fn list(data: web::Data<AppState>) -> HttpResponse {
             .finish();
     }
 
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     remove_expired(&mut pastas);
 
     // sort pastas in reverse-chronological order of creation time
     pastas.sort_by(|a, b| b.created.cmp(&a.created));
 
-    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-        ListTemplate {
-            pastas: &pastas,
-            args: &ARGS,
-        }
-        .render()
-        .unwrap(),
-    )
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(
+            ListTemplate {
+                pastas: &pastas,
+                args: &ARGS,
+            }
+            .render()
+            .unwrap(),
+        )
 }

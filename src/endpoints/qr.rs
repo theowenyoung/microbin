@@ -19,7 +19,7 @@ struct QRTemplate<'a> {
 #[get("/qr/{id}")]
 pub async fn getqr(data: web::Data<AppState>, id: web::Path<String>) -> HttpResponse {
     // get access to the pasta collection
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     let u64_id = if ARGS.hash_ids {
         hashid_to_u64(&id).unwrap_or(0)
@@ -55,15 +55,17 @@ pub async fn getqr(data: web::Data<AppState>, id: web::Path<String>) -> HttpResp
         });
 
         // serve qr code in template
-        return HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-            QRTemplate {
-                qr: &svg,
-                pasta: &pastas[index],
-                args: &ARGS,
-            }
-            .render()
-            .unwrap(),
-        );
+        return HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(
+                QRTemplate {
+                    qr: &svg,
+                    pasta: &pastas[index],
+                    args: &ARGS,
+                }
+                .render()
+                .unwrap(),
+            );
     }
 
     // otherwise

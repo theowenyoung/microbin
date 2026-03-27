@@ -8,7 +8,7 @@ use crate::{AppState, Pasta, ARGS};
 use actix_multipart::Multipart;
 use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Cookie, SameSite};
-use actix_web::error::ErrorBadRequest;
+use actix_web::error::{ErrorBadRequest, ErrorInternalServerError};
 use actix_web::{get, post, web, Error, HttpRequest, HttpResponse, Responder};
 use askama::Template;
 use bytesize::ByteSize;
@@ -38,8 +38,7 @@ fn check_uploader_cookie(req: &HttpRequest) -> bool {
     if !ARGS.readonly || ARGS.uploader_password.is_none() {
         return false;
     }
-    let expected_token =
-        generate_uploader_token(ARGS.uploader_password.as_ref().unwrap().trim());
+    let expected_token = generate_uploader_token(ARGS.uploader_password.as_ref().unwrap().trim());
     req.cookie("uploader_token")
         .map(|c| c.value() == expected_token)
         .unwrap_or(false)
@@ -47,27 +46,31 @@ fn check_uploader_cookie(req: &HttpRequest) -> bool {
 
 #[get("/")]
 pub async fn index(req: HttpRequest) -> impl Responder {
-    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-        IndexTemplate {
-            args: &ARGS,
-            has_uploader_cookie: check_uploader_cookie(&req),
-        }
-        .render()
-        .unwrap(),
-    )
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(
+            IndexTemplate {
+                args: &ARGS,
+                has_uploader_cookie: check_uploader_cookie(&req),
+            }
+            .render()
+            .unwrap(),
+        )
 }
 
 #[get("/{status}")]
 pub async fn index_with_status(req: HttpRequest, _param: web::Path<String>) -> HttpResponse {
     // status parameter exists for URL compatibility but is not used in template
-    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-        IndexTemplate {
-            args: &ARGS,
-            has_uploader_cookie: check_uploader_cookie(&req),
-        }
-        .render()
-        .unwrap(),
-    )
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(
+            IndexTemplate {
+                args: &ARGS,
+                has_uploader_cookie: check_uploader_cookie(&req),
+            }
+            .render()
+            .unwrap(),
+        )
 }
 
 pub fn expiration_to_timestamp(expiration: &str, timenow: i64) -> i64 {
@@ -108,28 +111,32 @@ pub struct UploaderLoginForm {
 /// Show login page
 #[get("/login")]
 pub async fn login_page() -> HttpResponse {
-    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-        LoginTemplate {
-            args: &ARGS,
-            status: String::from(""),
-        }
-        .render()
-        .unwrap(),
-    )
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(
+            LoginTemplate {
+                args: &ARGS,
+                status: String::from(""),
+            }
+            .render()
+            .unwrap(),
+        )
 }
 
 /// Show login page with status
 #[get("/login/{status}")]
 pub async fn login_page_with_status(param: web::Path<String>) -> HttpResponse {
     let status = param.into_inner();
-    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-        LoginTemplate {
-            args: &ARGS,
-            status,
-        }
-        .render()
-        .unwrap(),
-    )
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(
+            LoginTemplate {
+                args: &ARGS,
+                status,
+            }
+            .render()
+            .unwrap(),
+        )
 }
 
 /// Handle login form submission
@@ -159,7 +166,11 @@ pub async fn login_submit(form: web::Form<UploaderLoginForm>) -> HttpResponse {
             .path("/")
             .max_age(Duration::days(365 * 3))
             .secure(use_secure)
-            .same_site(if use_secure { SameSite::Strict } else { SameSite::Lax })
+            .same_site(if use_secure {
+                SameSite::Strict
+            } else {
+                SameSite::Lax
+            })
             .http_only(true)
             .finish();
         HttpResponse::Found()
@@ -170,7 +181,10 @@ pub async fn login_submit(form: web::Form<UploaderLoginForm>) -> HttpResponse {
         // Password incorrect, show login page with error
         log::warn!("Uploader login failed: incorrect password");
         HttpResponse::Found()
-            .append_header(("Location", format!("{}/login/incorrect", ARGS.public_path_as_str())))
+            .append_header((
+                "Location",
+                format!("{}/login/incorrect", ARGS.public_path_as_str()),
+            ))
             .finish()
     }
 }
@@ -184,8 +198,6 @@ pub async fn create(
     data: web::Data<AppState>,
     mut payload: Multipart,
 ) -> Result<HttpResponse, Error> {
-    let mut pastas = data.pastas.lock().unwrap();
-
     let timenow: i64 = match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(n) => n.as_secs(),
         Err(_) => {
@@ -218,6 +230,7 @@ pub async fn create(
     let mut plain_key: String = String::from("");
     let mut uploader_password = String::from("");
     let mut pending_file_data: Option<(PastaFile, Vec<u8>)> = None;
+    let mut saved_storage_path: Option<String> = None;
 
     while let Some(mut field) = payload.try_next().await? {
         let Some(field_name) = field.name() else {
@@ -435,7 +448,8 @@ pub async fn create(
             let storage_path = storage::generate_storage_path(&pasta_id, "data.enc");
             storage::save_file(&pasta_id, &storage_path, &encrypted_data)
                 .await
-                .expect("Failed to save encrypted file");
+                .map_err(ErrorInternalServerError)?;
+            saved_storage_path = Some(storage_path.clone());
 
             // Set file name with appropriate prefix for encrypted files
             if ARGS.s3_enabled() {
@@ -448,7 +462,8 @@ pub async fn create(
             let storage_path = storage::generate_storage_path(&pasta_id, &file.name);
             storage::save_file(&pasta_id, &storage_path, &file_data)
                 .await
-                .expect("Failed to save file");
+                .map_err(ErrorInternalServerError)?;
+            saved_storage_path = Some(storage_path.clone());
 
             // Update file name with S3 path if using S3
             if ARGS.s3_enabled() {
@@ -460,14 +475,32 @@ pub async fn create(
     }
 
     let encrypt_server = new_pasta.encrypt_server;
+    let pasta_id = new_pasta.id_as_animals();
+
+    let mut pastas = data.lock_pastas();
+    let mut persisted_pastas = pastas.clone();
+    persisted_pastas.push(new_pasta.clone());
+
+    if let Err(error) = insert(Some(&persisted_pastas), Some(&new_pasta)) {
+        log::error!("Failed to persist pasta {}: {}", id, error);
+        drop(pastas);
+
+        if let Some(storage_path) = saved_storage_path.as_deref() {
+            if let Err(cleanup_error) = storage::delete_file(&pasta_id, storage_path).await {
+                log::error!(
+                    "Failed to clean up file for unsaved pasta {}: {}",
+                    pasta_id,
+                    cleanup_error
+                );
+            }
+        }
+
+        return Ok(HttpResponse::InternalServerError()
+            .content_type("text/plain; charset=utf-8")
+            .body("Failed to save upload."));
+    }
 
     pastas.push(new_pasta);
-
-    for (_, pasta) in pastas.iter().enumerate() {
-        if pasta.id == id {
-            insert(Some(&pastas), Some(pasta));
-        }
-    }
 
     let slug = if ARGS.hash_ids {
         to_hashids(id)

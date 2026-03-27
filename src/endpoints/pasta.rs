@@ -28,7 +28,7 @@ fn pastaresponse(
     skip_increment: bool,
 ) -> HttpResponse {
     // get access to the pasta collection
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     let id = if ARGS.hash_ids {
         hashid_to_u64(&id).unwrap_or(0)
@@ -55,7 +55,11 @@ fn pastaresponse(
             return HttpResponse::Found()
                 .append_header((
                     "Location",
-                    format!("{}/auth/{}", ARGS.public_path_as_str(), pastas[index].id_as_animals()),
+                    format!(
+                        "{}/auth/{}",
+                        ARGS.public_path_as_str(),
+                        pastas[index].id_as_animals()
+                    ),
                 ))
                 .finish();
         }
@@ -81,21 +85,27 @@ fn pastaresponse(
                 return HttpResponse::Found()
                     .append_header((
                         "Location",
-                        format!("{}/auth/{}/incorrect", ARGS.public_path_as_str(), pastas[index].id_as_animals()),
+                        format!(
+                            "{}/auth/{}/incorrect",
+                            ARGS.public_path_as_str(),
+                            pastas[index].id_as_animals()
+                        ),
                     ))
                     .finish();
             }
         }
 
         // serve pasta in template
-        let response = HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-            PastaTemplate {
-                pasta: &pastas[index],
-                args: &ARGS,
-            }
-            .render()
-            .unwrap(),
-        );
+        let response = HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(
+                PastaTemplate {
+                    pasta: &pastas[index],
+                    args: &ARGS,
+                }
+                .render()
+                .unwrap(),
+            );
 
         if pastas[index].content != original_content {
             pastas[index].content = original_content;
@@ -174,7 +184,10 @@ fn verify_owner_token(token: &str, id: &str) -> bool {
         if numbers.len() == 2 {
             let expiry = numbers[0];
             let token_id = numbers[1];
-            let timenow = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let timenow = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
 
             // verify the token is valid
             let target_id = if ARGS.hash_ids {
@@ -199,7 +212,7 @@ pub async fn getshortpasta(data: web::Data<AppState>, id: web::Path<String>) -> 
 
 fn urlresponse(data: web::Data<AppState>, id: web::Path<String>) -> HttpResponse {
     // get access to the pasta collection
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     let id = if ARGS.hash_ids {
         hashid_to_u64(&id).unwrap_or(0)
@@ -281,7 +294,7 @@ pub async fn getrawpasta(
     id: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     // get access to the pasta collection
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     let id = if ARGS.hash_ids {
         hashid_to_u64(&id).unwrap_or(0)
@@ -308,7 +321,11 @@ pub async fn getrawpasta(
             return Ok(HttpResponse::Found()
                 .append_header((
                     "Location",
-                    format!("{}/auth_raw/{}", ARGS.public_path_as_str(), pastas[index].id_as_animals()),
+                    format!(
+                        "{}/auth_raw/{}",
+                        ARGS.public_path_as_str(),
+                        pastas[index].id_as_animals()
+                    ),
                 ))
                 .finish());
         }
@@ -354,7 +371,7 @@ pub async fn postrawpasta(
     let password = auth::password_from_multipart(payload).await?;
 
     // get access to the pasta collection
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     let id = if ARGS.hash_ids {
         hashid_to_u64(&id).unwrap_or(0)
@@ -381,7 +398,11 @@ pub async fn postrawpasta(
             return Ok(HttpResponse::Found()
                 .append_header((
                     "Location",
-                    format!("{}/auth/{}", ARGS.public_path_as_str(), pastas[index].id_as_animals()),
+                    format!(
+                        "{}/auth/{}",
+                        ARGS.public_path_as_str(),
+                        pastas[index].id_as_animals()
+                    ),
                 ))
                 .finish());
         }
@@ -405,7 +426,11 @@ pub async fn postrawpasta(
                 return Ok(HttpResponse::Found()
                     .append_header((
                         "Location",
-                        format!("{}/auth/{}/incorrect", ARGS.public_path_as_str(), pastas[index].id_as_animals()),
+                        format!(
+                            "{}/auth/{}/incorrect",
+                            ARGS.public_path_as_str(),
+                            pastas[index].id_as_animals()
+                        ),
                     ))
                     .finish());
             }

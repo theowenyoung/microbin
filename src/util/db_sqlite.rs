@@ -7,21 +7,19 @@ pub fn read_all() -> Vec<Pasta> {
     select_all_from_db()
 }
 
-pub fn update_all(pastas: &[Pasta]) {
-    rewrite_all_to_db(pastas);
+pub fn update_all(pastas: &[Pasta]) -> rusqlite::Result<()> {
+    rewrite_all_to_db(pastas)
 }
 
-pub fn rewrite_all_to_db(pasta_data: &[Pasta]) {
-    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))
-        .expect("Failed to open SQLite database!");
+pub fn rewrite_all_to_db(pasta_data: &[Pasta]) -> rusqlite::Result<()> {
+    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))?;
 
     conn.execute(
         "
         DROP TABLE IF EXISTS pasta;
-        );",
+        ",
         params![],
-    )
-    .expect("Failed to drop SQLite table for Pasta!");
+    )?;
 
     conn.execute(
         "
@@ -46,8 +44,7 @@ pub fn rewrite_all_to_db(pasta_data: &[Pasta]) {
             title TEXT
         );",
         params![],
-    )
-    .expect("Failed to create SQLite table for Pasta!");
+    )?;
 
     for pasta in pasta_data.iter() {
         conn.execute(
@@ -91,9 +88,10 @@ pub fn rewrite_all_to_db(pasta_data: &[Pasta]) {
                 pasta.pasta_type,
                 pasta.title.as_deref().unwrap_or(""),
             ],
-        )
-        .expect("Failed to insert pasta.");
+        )?;
     }
+
+    Ok(())
 }
 
 pub fn select_all_from_db() -> Vec<Pasta> {
@@ -175,9 +173,8 @@ pub fn select_all_from_db() -> Vec<Pasta> {
         .collect::<Vec<Pasta>>()
 }
 
-pub fn insert(pasta: &Pasta) {
-    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))
-        .expect("Failed to open SQLite database!");
+pub fn insert(pasta: &Pasta) -> rusqlite::Result<()> {
+    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))?;
 
     conn.execute(
         "
@@ -202,8 +199,7 @@ pub fn insert(pasta: &Pasta) {
             title TEXT
         );",
         params![],
-    )
-    .expect("Failed to create SQLite table for Pasta!");
+    )?;
 
     conn.execute(
         "INSERT INTO pasta (
@@ -246,13 +242,13 @@ pub fn insert(pasta: &Pasta) {
             pasta.pasta_type,
             pasta.title.as_deref().unwrap_or(""),
         ],
-    )
-    .expect("Failed to insert pasta.");
+    )?;
+
+    Ok(())
 }
 
-pub fn update(pasta: &Pasta) {
-    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))
-        .expect("Failed to open SQLite database!");
+pub fn update(pasta: &Pasta) -> rusqlite::Result<()> {
+    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))?;
 
     conn.execute(
         "UPDATE pasta SET
@@ -294,18 +290,19 @@ pub fn update(pasta: &Pasta) {
             pasta.pasta_type,
             pasta.title.as_deref().unwrap_or(""),
         ],
-    )
-    .expect("Failed to update pasta.");
+    )?;
+
+    Ok(())
 }
 
-pub fn delete_by_id(id: u64) {
-    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))
-        .expect("Failed to open SQLite database!");
+pub fn delete_by_id(id: u64) -> rusqlite::Result<()> {
+    let conn = Connection::open(format!("{}/database.sqlite", ARGS.data_dir))?;
 
     conn.execute(
         "DELETE FROM pasta 
         WHERE id = ?1;",
         params![id],
-    )
-    .expect("Failed to delete pasta.");
+    )?;
+
+    Ok(())
 }

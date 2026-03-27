@@ -22,7 +22,10 @@ struct AdminTemplate<'a> {
 #[get("/admin")]
 pub async fn get_admin() -> Result<HttpResponse, Error> {
     return Ok(HttpResponse::Found()
-        .append_header(("Location", format!("{}/auth_admin", ARGS.public_path_as_str())))
+        .append_header((
+            "Location",
+            format!("{}/auth_admin", ARGS.public_path_as_str()),
+        ))
         .finish());
 }
 
@@ -48,11 +51,14 @@ pub async fn post_admin(
 
     if username != ARGS.auth_admin_username || password != ARGS.auth_admin_password {
         return Ok(HttpResponse::Found()
-            .append_header(("Location", format!("{}/auth_admin/incorrect", ARGS.public_path_as_str())))
+            .append_header((
+                "Location",
+                format!("{}/auth_admin/incorrect", ARGS.public_path_as_str()),
+            ))
             .finish());
     }
 
-    let mut pastas = data.pastas.lock().unwrap();
+    let mut pastas = data.lock_pastas();
 
     remove_expired(&mut pastas);
 
@@ -91,16 +97,18 @@ pub async fn post_admin(
         update = None;
     }
 
-    Ok(HttpResponse::Ok().content_type("text/html; charset=utf-8").body(
-        AdminTemplate {
-            pastas: &pastas,
-            args: &ARGS,
-            status: &String::from(status),
-            version_string: &format!("{}", CURRENT_VERSION.long_title),
-            message: &String::from(message),
-            update: &update,
-        }
-        .render()
-        .unwrap(),
-    ))
+    Ok(HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(
+            AdminTemplate {
+                pastas: &pastas,
+                args: &ARGS,
+                status: &String::from(status),
+                version_string: &format!("{}", CURRENT_VERSION.long_title),
+                message: &String::from(message),
+                update: &update,
+            }
+            .render()
+            .unwrap(),
+        ))
 }
