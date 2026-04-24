@@ -1,6 +1,6 @@
 [package]
 name = "microbin"
-version = "2.1.0-14"
+version = "2.1.0-15"
 edition = "2021"
 rust-version = "1.74.0"
 authors = ["Daniel Szabo <daniel@microbin.eu>"]
@@ -45,7 +45,7 @@ rust-embed = "8.3.0"
 rustls = { version = "0.23", default-features = false, features = ["custom-provider"], optional = true }
 rustls-rustcrypto = { version = "0.0.2-alpha", optional = true }
 
-rust-s3 = { version = "0.35", default-features = false, features = ["tokio-rustls-tls"] }
+rust-s3 = { version = "0.35", default-features = false, features = ["use-tokio-native-tls"] }
 sanitize-filename = "0.5.0"
 serde_json = "1.0.114"
 sha2 = "0.10"

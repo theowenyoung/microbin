@@ -437,9 +437,25 @@
                 if (xhr.status === 200 || xhr.status === 302) {
                     window.location.href = xhr.responseURL;
                 } else {
-                    console.log('Request failed with status:', xhr.status);
+                    clearTimeout(showProgressTimeout);
+                    submitButton.disabled = false;
+                    submitButton.value = 'Save';
+                    submitButton.textContent = 'Save';
+                    const body = (xhr.responseText || '').trim();
+                    const detail = xhr.status === 0
+                        ? 'Network error or connection aborted'
+                        : body.slice(0, 500) || `HTTP ${xhr.status}`;
+                    alert(`Upload failed (${xhr.status}): ${detail}`);
                 }
             }
+        };
+
+        xhr.onerror = function () {
+            clearTimeout(showProgressTimeout);
+            submitButton.disabled = false;
+            submitButton.value = 'Save';
+            submitButton.textContent = 'Save';
+            alert('Upload failed: network error');
         };
 
         const formData = new FormData(form);
