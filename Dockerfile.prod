@@ -35,9 +35,7 @@ COPY --from=build \
   /usr/share/zoneinfo \
   /usr/share/
 
-COPY --from=build \
-  /etc/ssl/certs/ca-certificates.crt \
-  /etc/ssl/certs/ca-certificates.crt
+RUN install_packages ca-certificates
 
 # Copy built executable
 COPY --from=build /app/microbin-binary /usr/bin/microbin
